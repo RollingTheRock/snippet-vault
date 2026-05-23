@@ -1,5 +1,31 @@
-const { contextBridge } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  windowType: 'mainManager'
+  windowType: 'mainManager',
+
+  // Snippets
+  getSnippets: () => ipcRenderer.invoke('snippets:getAll'),
+  searchSnippets: (query) => ipcRenderer.invoke('snippets:search', query),
+  createSnippet: (data) => ipcRenderer.invoke('snippets:create', data),
+  updateSnippet: (id, data) => ipcRenderer.invoke('snippets:update', id, data),
+  deleteSnippet: (id) => ipcRenderer.invoke('snippets:delete', id),
+  copySnippet: (content) => ipcRenderer.invoke('snippets:copyToClipboard', content),
+  getSnippetTags: (id) => ipcRenderer.invoke('snippets:getTags', id),
+  setSnippetTags: (id, tagIds) => ipcRenderer.invoke('snippets:setTags', id, tagIds),
+
+  // Tags
+  getTags: () => ipcRenderer.invoke('tags:getAll'),
+  createTag: (data) => ipcRenderer.invoke('tags:create', data),
+  updateTag: (id, data) => ipcRenderer.invoke('tags:update', id, data),
+  deleteTag: (id) => ipcRenderer.invoke('tags:delete', id),
+
+  // Window
+  showMainManager: () => ipcRenderer.invoke('window:showMainManager'),
+  openPreview: (content, language) => ipcRenderer.invoke('preview:open', content, language),
+
+  // Events
+  onShortcutsTriggered: (callback) => ipcRenderer.on('shortcuts:quickLaunchTriggered', callback),
+  onSnippetsUpdated: (callback) => ipcRenderer.on('snippets:updated', callback),
+
+  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
 })
