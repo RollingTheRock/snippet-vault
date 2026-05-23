@@ -1,0 +1,14 @@
+appId: com.yourname.snippetvault
+productName: SnippetVault
+directories:
+  output: dist-electron-build
+files:
+  - dist-electron/**
+  - dist/**
+  - assets/**
+linux:
+  target:
+    - AppImage
+    - dir
+  category: Development
+  maintainer: Your Name

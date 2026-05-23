@@ -180,6 +180,10 @@ onMounted(() => {
   align-items: center;
   padding: 0 16px;
   gap: 10px;
+  -webkit-app-region: drag;
+}
+.toolbar button, .toolbar input, .toolbar select {
+  -webkit-app-region: no-drag;
 }
 .brand { color: #fff; font-weight: 600; margin-right: 10px; }
 .btn-primary {

@@ -49,6 +49,8 @@ const highlightedCode = computed(() => {
   resize: none;
   outline: none;
   color: var(--text-primary);
+  white-space: pre;
+  tab-size: 2;
 }
 .code-preview :deep(pre) { margin: 0; background: transparent !important; }
 .code-preview :deep(code) { font-family: 'Fira Code', 'Consolas', monospace; }

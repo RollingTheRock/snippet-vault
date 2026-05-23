@@ -24,6 +24,7 @@ defineEmits(['select'])
   padding: 10px 14px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s ease;
 }
 .snippet-item:hover { background: var(--bg-tertiary); }
 .snippet-item.active {
