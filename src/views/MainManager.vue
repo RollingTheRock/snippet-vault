@@ -35,11 +35,10 @@
             </option>
           </select>
         </div>
-        <textarea
+        <CodeEditor
           v-model="editForm.content"
-          class="code-editor"
+          :language="editForm.language"
           placeholder="输入代码..."
-          spellcheck="false"
         />
         <div class="editor-actions">
           <button class="btn-primary" @click="handlePreview">预览效果</button>
@@ -58,6 +57,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useSnippetStore } from '../stores/snippets.js'
 import SnippetList from '../components/SnippetList.vue'
+import CodeEditor from '../components/CodeEditor.vue'
 
 const snippetStore = useSnippetStore()
 const searchQuery = ref('')
