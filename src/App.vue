@@ -7,8 +7,13 @@ import { computed } from 'vue'
 import QuickLaunch from './views/QuickLaunch.vue'
 import MainManager from './views/MainManager.vue'
 
+function getWindowType() {
+  const params = new URLSearchParams(window.location.search)
+  return params.get('window') || 'mainManager'
+}
+
 const viewMap = { quickLaunch: QuickLaunch, mainManager: MainManager }
-const currentView = computed(() => viewMap[window.electronAPI?.windowType] || MainManager)
+const currentView = computed(() => viewMap[getWindowType()] || MainManager)
 </script>
 
 <style>

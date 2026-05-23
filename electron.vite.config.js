@@ -16,6 +16,7 @@ export default defineConfig({
   preload: {
     build: {
       outDir: 'dist-electron',
+      emptyOutDir: false,
       lib: {
         entry: resolve('electron/preload.js'),
         formats: ['cjs']
