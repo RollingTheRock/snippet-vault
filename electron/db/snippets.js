@@ -1,22 +1,32 @@
 const db = require('./index')
 
 const getAll = () => {
-  return db.prepare('SELECT * FROM snippets ORDER BY updated_at DESC').all()
+  const snippets = db.prepare('SELECT * FROM snippets ORDER BY updated_at DESC').all()
+  for (const snippet of snippets) {
+    snippet.tags = getTags(snippet.id)
+  }
+  return snippets
 }
 
 const getById = (id) => {
-  return db.prepare('SELECT * FROM snippets WHERE id = ?').get(id)
+  const snippet = db.prepare('SELECT * FROM snippets WHERE id = ?').get(id)
+  if (snippet) snippet.tags = getTags(id)
+  return snippet
 }
 
 const search = (query) => {
   const term = `%${query}%`
-  return db.prepare(`
+  const snippets = db.prepare(`
     SELECT DISTINCT s.* FROM snippets s
     LEFT JOIN snippet_tags st ON s.id = st.snippet_id
     LEFT JOIN tags t ON st.tag_id = t.id
     WHERE s.title LIKE ? OR s.content LIKE ? OR s.language LIKE ? OR t.name LIKE ?
     ORDER BY s.updated_at DESC
   `).all(term, term, term, term)
+  for (const snippet of snippets) {
+    snippet.tags = getTags(snippet.id)
+  }
+  return snippets
 }
 
 const create = ({ title, content, language, description = '' }) => {

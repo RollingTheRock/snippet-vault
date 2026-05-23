@@ -34,6 +34,7 @@
               {{ lang.label }}
             </option>
           </select>
+          <TagInput v-model="currentTags" />
         </div>
         <CodeEditor
           v-model="editForm.content"
@@ -56,12 +57,16 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useSnippetStore } from '../stores/snippets.js'
+import { useTagStore } from '../stores/tags.js'
 import SnippetList from '../components/SnippetList.vue'
 import CodeEditor from '../components/CodeEditor.vue'
+import TagInput from '../components/TagInput.vue'
 
 const snippetStore = useSnippetStore()
+const tagStore = useTagStore()
 const searchQuery = ref('')
 const editForm = reactive({ title: '', content: '', language: 'javascript' })
+const currentTags = ref([])
 
 const languages = [
   { value: 'html', label: 'HTML' },
@@ -85,16 +90,20 @@ const selectedId = computed(() => snippetStore.selectedId)
 const selectedSnippet = computed(() => snippetStore.selectedSnippet)
 const hasChanges = computed(() => {
   if (!selectedSnippet.value) return false
+  const tagsChanged = JSON.stringify((selectedSnippet.value.tags || []).map(t => t.id).sort()) !==
+    JSON.stringify(currentTags.value.map(t => t.id).sort())
   return editForm.title !== selectedSnippet.value.title ||
     editForm.content !== selectedSnippet.value.content ||
-    editForm.language !== selectedSnippet.value.language
+    editForm.language !== selectedSnippet.value.language ||
+    tagsChanged
 })
 
-watch(selectedSnippet, (snippet) => {
+watch(selectedSnippet, async (snippet) => {
   if (snippet) {
     editForm.title = snippet.title
     editForm.content = snippet.content
     editForm.language = snippet.language
+    currentTags.value = snippet.tags || []
   }
 }, { immediate: true })
 
@@ -112,11 +121,13 @@ async function handleNew() {
 
 async function handleSave() {
   if (!selectedId.value) return
-  await snippetStore.updateSnippet(selectedId.value, {
+  const snippet = await snippetStore.updateSnippet(selectedId.value, {
     title: editForm.title,
     content: editForm.content,
     language: editForm.language
   })
+  await window.electronAPI.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
+  await snippetStore.loadSnippets()
 }
 
 async function handleDelete() {
@@ -138,6 +149,7 @@ function handlePreview() {
 
 onMounted(() => {
   snippetStore.loadSnippets()
+  tagStore.loadTags()
 })
 </script>
 
