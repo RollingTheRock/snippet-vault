@@ -25,8 +25,9 @@ function createMainManagerWindow() {
     }
   })
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainManagerWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
+  const rendererUrl = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL
+  if (rendererUrl) {
+    mainManagerWindow.loadURL(rendererUrl)
   } else {
     mainManagerWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
   }

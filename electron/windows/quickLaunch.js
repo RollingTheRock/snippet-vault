@@ -30,8 +30,9 @@ function createQuickLaunchWindow() {
 
   quickLaunchWindow.setVisibleOnAllWorkspaces(true)
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    quickLaunchWindow.loadURL(process.env.VITE_DEV_SERVER_URL + '?window=quickLaunch')
+  const rendererUrl = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL
+  if (rendererUrl) {
+    quickLaunchWindow.loadURL(rendererUrl + '?window=quickLaunch')
   } else {
     quickLaunchWindow.loadFile(path.join(__dirname, '../../dist/index.html'), {
       query: { window: 'quickLaunch' }

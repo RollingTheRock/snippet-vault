@@ -13,7 +13,7 @@ app.whenReady().then(() => {
   // Create tray
   tray = new Tray(path.join(__dirname, '../assets/tray-icon.png'))
   const contextMenu = Menu.buildFromTemplate([
-    { label: '打开快启搜索', click: toggleQuickLaunchWindow },
+    { label: '打开快启搜索 (Ctrl+Shift+Space)', click: toggleQuickLaunchWindow },
     { label: '打开管理窗口', click: showMainManagerWindow },
     { type: 'separator' },
     { label: '退出', click: () => app.quit() }
@@ -22,8 +22,8 @@ app.whenReady().then(() => {
   tray.setContextMenu(contextMenu)
   tray.on('click', showMainManagerWindow)
 
-  // Register global shortcut
-  globalShortcut.register('Alt+Space', toggleQuickLaunchWindow)
+  // Register global shortcut (Ctrl+Shift+Space avoids Linux window-menu conflict)
+  globalShortcut.register('Ctrl+Shift+Space', toggleQuickLaunchWindow)
 
   // Show main window on start
   showMainManagerWindow()

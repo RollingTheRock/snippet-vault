@@ -7,12 +7,13 @@ const previews = new Map()
 function createPreviewWindow(content, language) {
   previewCounter++
   const win = new BrowserWindow({
-    width: 500,
-    height: 400,
+    width: 520,
+    height: 420,
     minWidth: 300,
     minHeight: 250,
-    frame: false,
-    titleBarStyle: 'hidden',
+    show: false,
+    backgroundColor: '#ffffff',
+    title: `预览 #${previewCounter}`,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -29,7 +30,11 @@ function createPreviewWindow(content, language) {
     win.loadURL(`data:text/plain;charset=utf-8,${encodeURIComponent(content)}`)
   }
 
-  win.setTitle(`预览 #${previewCounter}`)
+  win.once('ready-to-show', () => {
+    win.show()
+    win.focus()
+  })
+
   previews.set(win.id, win)
 
   win.on('closed', () => {
