@@ -6,6 +6,9 @@
       <button class="btn-primary" @click="handleNew">+ 新建片段</button>
       <button class="btn-secondary" @click="handleSave" :disabled="!hasChanges">保存</button>
       <button class="btn-secondary" @click="handleDelete" :disabled="!selectedId">删除</button>
+      <div style="flex:1"></div>
+      <button class="btn-secondary" @click="handleExport">导出</button>
+      <button class="btn-secondary" @click="handleImport">导入</button>
     </div>
 
     <!-- Content -->
@@ -133,6 +136,15 @@ async function handleSave() {
 async function handleDelete() {
   if (!selectedId.value) return
   await snippetStore.deleteSnippet(selectedId.value)
+}
+
+async function handleExport() {
+  await window.electronAPI.exportSnippets()
+}
+
+async function handleImport() {
+  await window.electronAPI.importSnippets()
+  await snippetStore.loadSnippets()
 }
 
 async function handleCopy() {

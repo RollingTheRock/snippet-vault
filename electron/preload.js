@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copySnippet: (content) => ipcRenderer.invoke('snippets:copyToClipboard', content),
   getSnippetTags: (id) => ipcRenderer.invoke('snippets:getTags', id),
   setSnippetTags: (id, tagIds) => ipcRenderer.invoke('snippets:setTags', id, tagIds),
+  exportSnippets: () => ipcRenderer.invoke('snippets:export'),
+  importSnippets: () => ipcRenderer.invoke('snippets:import'),
 
   // Tags
   getTags: () => ipcRenderer.invoke('tags:getAll'),
