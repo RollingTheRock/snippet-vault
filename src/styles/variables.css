@@ -1,0 +1,13 @@
+:root {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d2d;
+  --border-color: #3c3c3c;
+  --text-primary: #d4d4d4;
+  --text-secondary: #858585;
+  --accent-blue: #4a9eff;
+  --accent-purple: #c586c0;
+  --accent-green: #4ec9b0;
+  --button-primary: #0e639c;
+  --selection-bg: #37373d;
+}
