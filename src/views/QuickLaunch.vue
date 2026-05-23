@@ -39,7 +39,7 @@
     <!-- Footer -->
     <div class="footer">
       <span>Enter 复制 · Ctrl+Enter 预览 · Esc 关闭</span>
-      <span class="open-manager" @click="openManager">Ctrl+M 管理窗口</span>
+      <span class="open-manager" @click="openManager">打开管理窗口</span>
     </div>
   </div>
 </template>
