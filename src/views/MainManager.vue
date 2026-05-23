@@ -1,5 +1,5 @@
 <template>
-  <div class="main-manager">
+  <div class="main-manager" tabindex="-1" @keydown="handleManagerKeydown">
     <!-- Toolbar -->
     <div class="toolbar">
       <span class="brand">SnippetVault</span>
@@ -154,8 +154,17 @@ async function handleCopy() {
 }
 
 function handlePreview() {
+  console.log('[MainManager] handlePreview called')
   if (selectedSnippet.value) {
+    console.log('[MainManager] Opening preview for:', selectedSnippet.value.language)
     window.electronAPI.openPreview(selectedSnippet.value.content, selectedSnippet.value.language)
+  }
+}
+
+function handleManagerKeydown(e) {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === ' ') {
+    e.preventDefault()
+    window.electronAPI.toggleQuickLaunch()
   }
 }
 

@@ -33,8 +33,14 @@ app.whenReady().then(() => {
     showMainManagerWindow()
   })
 
+  // IPC: toggle quick launch
+  ipcMain.handle('quicklaunch:toggle', () => {
+    toggleQuickLaunchWindow()
+  })
+
   // IPC: open preview
   ipcMain.handle('preview:open', (_, content, language) => {
+    console.log(`[IPC] preview:open called, language=${language}, content length=${content?.length}`)
     createPreviewWindow(content, language)
   })
 

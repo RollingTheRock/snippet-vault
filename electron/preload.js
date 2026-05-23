@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Window
   showMainManager: () => ipcRenderer.invoke('window:showMainManager'),
+  toggleQuickLaunch: () => ipcRenderer.invoke('quicklaunch:toggle'),
   openPreview: (content, language) => ipcRenderer.invoke('preview:open', content, language),
 
   // Events
