@@ -1,0 +1,112 @@
+<h2>整体窗口架构</h2>
+<p class="subtitle">3 种窗口各司其职，通过 IPC 通信协作</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">应用架构概览</div>
+    <div class="mockup-body">
+      <div style="display:flex;gap:20px;align-items:flex-start;">
+        <!-- 快启搜索框 -->
+        <div style="flex:1;border:2px solid #4a9eff;border-radius:8px;padding:15px;background:#1e1e1e;">
+          <div class="label" style="color:#4a9eff;margin-bottom:8px;">窗口 1：快启搜索框</div>
+          <div style="font-size:13px;color:#ccc;line-height:1.6;">
+            <div style="background:#2d2d2d;border-radius:6px;padding:8px 12px;margin-bottom:10px;color:#fff;">
+              🔍 输入片段名或 #标签...
+            </div>
+            <div style="background:#252526;border-radius:4px;padding:6px 10px;margin-bottom:6px;color:#d4d4d4;font-size:12px;">
+              📄 Vue 表单验证模板 <span style="color:#858585;">#vue #form</span>
+            </div>
+            <div style="background:#252526;border-radius:4px;padding:6px 10px;margin-bottom:6px;color:#d4d4d4;font-size:12px;">
+              📄 Flex 居中布局 <span style="color:#858585;">#css #layout</span>
+            </div>
+            <div style="background:#37373d;border-radius:4px;padding:6px 10px;color:#d4d4d4;font-size:12px;border-left:3px solid #4a9eff;">
+              📄 JS 防抖函数 <span style="color:#858585;">#js #utils</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:#858585;">
+            ↑↓ 选择 · Enter 复制 · Cmd+Enter 预览 · Esc 关闭
+          </div>
+        </div>
+
+        <!-- 主管理窗口 -->
+        <div style="flex:1.5;border:2px solid #c586c0;border-radius:8px;padding:15px;background:#1e1e1e;">
+          <div class="label" style="color:#c586c0;margin-bottom:8px;">窗口 2：主管理窗口</div>
+          <div style="display:flex;gap:10px;height:180px;">
+            <div style="width:35%;background:#252526;border-radius:6px;padding:10px;font-size:11px;color:#ccc;">
+              <div style="font-weight:bold;margin-bottom:8px;color:#fff;">📑 片段列表</div>
+              <div style="padding:4px 0;color:#4a9eff;">▸ Vue 表单验证</div>
+              <div style="padding:4px 0;">  Flex 居中布局</div>
+              <div style="padding:4px 0;">  JS 防抖函数</div>
+              <div style="padding:4px 0;">  Python 文件读取</div>
+            </div>
+            <div style="flex:1;background:#1e1e1e;border-radius:6px;padding:10px;font-size:11px;color:#ccc;border:1px solid #3c3c3c;">
+              <div style="font-weight:bold;margin-bottom:8px;color:#fff;">✏️ 编辑器</div>
+              <div style="font-family:monospace;font-size:10px;color:#d4d4d4;line-height:1.5;">
+                <span style="color:#c586c0;">function</span> <span style="color:#dcdcaa;">debounce</span>(fn, delay) {<br>
+                &nbsp;&nbsp;<span style="color:#c586c0;">let</span> timer = <span style="color:#569cd6;">null</span>;<br>
+                &nbsp;&nbsp;<span style="color:#c586c0;">return</span> (...args) => {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;clearTimeout(timer);<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;timer = setTimeout(() => fn(...args), delay);<br>
+                &nbsp;&nbsp;};<br>
+                }
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:#858585;">
+            顶部工具栏：新建 | 保存 | 删除 | 标签管理 | 导入/导出
+          </div>
+        </div>
+
+        <!-- 预览窗口 -->
+        <div style="flex:1;border:2px solid #4ec9b0;border-radius:8px;padding:15px;background:#1e1e1e;">
+          <div class="label" style="color:#4ec9b0;margin-bottom:8px;">窗口 3：浮动预览窗口</div>
+          <div style="background:#fff;border-radius:6px;padding:20px;height:120px;display:flex;align-items:center;justify-content:center;color:#333;font-size:14px;">
+            <div style="text-align:center;">
+              <div style="width:100px;height:60px;background:linear-gradient(45deg,#667eea,#764ba2);border-radius:8px;margin:0 auto 10px;"></div>
+              <div>CSS 渐变效果预览</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:#858585;">
+            可多开 · 独立窗口 · 实时刷新
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>交互流转</h3>
+  <div style="display:flex;align-items:center;gap:15px;font-size:13px;color:#ccc;">
+    <div style="background:#252526;padding:10px 15px;border-radius:6px;">
+      <span style="color:#4a9eff;font-weight:bold;">Alt+Space</span><br>
+      <span style="font-size:11px;color:#858585;">呼出快启框</span>
+    </div>
+    <div style="color:#858585;">→</div>
+    <div style="background:#252526;padding:10px 15px;border-radius:6px;">
+      <span style="color:#d4d4d4;font-weight:bold;">输入搜索</span><br>
+      <span style="font-size:11px;color:#858585;">模糊匹配</span>
+    </div>
+    <div style="color:#858585;">→</div>
+    <div style="background:#252526;padding:10px 15px;border-radius:6px;">
+      <span style="color:#c586c0;font-weight:bold;">Enter / Cmd+Enter</span><br>
+      <span style="font-size:11px;color:#858585;">复制 / 预览</span>
+    </div>
+    <div style="color:#858585;">→</div>
+    <div style="background:#252526;padding:10px 15px;border-radius:6px;">
+      <span style="color:#4ec9b0;font-weight:bold;">预览窗口弹出</span><br>
+      <span style="font-size:11px;color:#858585;">渲染 HTML/CSS/JS</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>托盘与快捷键</h3>
+  <ul style="color:#ccc;font-size:13px;line-height:1.8;">
+    <li>🖥️ <b>系统托盘驻留</b>：右键菜单 → 打开管理窗口 / 快启搜索 / 退出</li>
+    <li>⌨️ <b>Alt+Space</b>（可配置）：全局呼出/隐藏快启搜索框</li>
+    <li>⌨️ <b>Esc</b>：关闭快启搜索框（失焦自动隐藏）</li>
+    <li>⌨️ <b>Cmd/Ctrl+N</b>：在主窗口中新建片段</li>
+    <li>⌨️ <b>Cmd/Ctrl+S</b>：保存当前编辑的片段</li>
+  </ul>
+</div>

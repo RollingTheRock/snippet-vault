@@ -1,0 +1,94 @@
+<h2>预览窗口 UI 设计</h2>
+<p class="subtitle">独立浮动窗口，渲染 HTML/CSS/JS，可多开对比</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">预览窗口（400×300，可调整大小，可多开）</div>
+    <div class="mockup-body">
+      <div style="width:380px;background:#1e1e1e;border-radius:8px;overflow:hidden;border:1px solid #3c3c3c;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
+        <!-- 标题栏 -->
+        <div style="height:32px;background:#2d2d2d;border-bottom:1px solid #3c3c3c;display:flex;align-items:center;padding:0 12px;gap:8px;-webkit-app-region:drag;">
+          <div style="display:flex;gap:6px;-webkit-app-region:no-drag;">
+            <div style="width:12px;height:12px;border-radius:50%;background:#ff5f56;"></div>
+            <div style="width:12px;height:12px;border-radius:50%;background:#ffbd2e;"></div>
+            <div style="width:12px;height:12px;border-radius:50%;background:#27c93f;"></div>
+          </div>
+          <span style="color:#ccc;font-size:12px;flex:1;text-align:center;">预览: Flex 居中布局</span>
+          <div style="display:flex;gap:6px;-webkit-app-region:no-drag;">
+            <button style="background:transparent;border:none;color:#858585;font-size:12px;cursor:pointer;padding:2px 6px;border-radius:3px;">刷新</button>
+            <button style="background:transparent;border:none;color:#858585;font-size:12px;cursor:pointer;padding:2px 6px;border-radius:3px;">复制</button>
+            <button style="background:transparent;border:none;color:#858585;font-size:12px;cursor:pointer;padding:2px 6px;border-radius:3px;">在新窗口打开</button>
+          </div>
+        </div>
+        
+        <!-- 渲染区域 -->
+        <div style="height:220px;background:#fff;overflow:auto;">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:gap:20px;">
+            <div style="text-align:center;">
+              <div style="width:120px;height:80px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);border-radius:8px;margin:0 auto 16px;box-shadow:0 4px 15px rgba(102,126,234,0.4);"></div>
+              <div style="color:#333;font-size:14px;font-weight:500;">CSS 渐变效果</div>
+              <div style="color:#666;font-size:12px;margin-top:4px;">linear-gradient(135deg, ...)</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 底部信息栏 -->
+        <div style="padding:8px 12px;background:#252526;border-top:1px solid #3c3c3c;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#858585;">
+          <span>HTML/CSS/JS 实时渲染</span>
+          <span>窗口 #3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>多开对比场景</h3>
+  <div style="display:flex;gap:15px;align-items:flex-start;">
+    <div style="flex:1;background:#252526;padding:15px;border-radius:8px;">
+      <div style="color:#4a9eff;font-weight:bold;margin-bottom:10px;font-size:13px;">窗口 A: 方案一</div>
+      <div style="background:#fff;height:100px;border-radius:4px;display:flex;align-items:center;justify-content:center;">
+        <div style="width:80px;height:50px;background:#667eea;border-radius:4px;"></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#858585;">纯色背景方案</div>
+    </div>
+    <div style="flex:1;background:#252526;padding:15px;border-radius:8px;">
+      <div style="color:#c586c0;font-weight:bold;margin-bottom:10px;font-size:13px;">窗口 B: 方案二</div>
+      <div style="background:#fff;height:100px;border-radius:4px;display:flex;align-items:center;justify-content:center;">
+        <div style="width:80px;height:50px;background:linear-gradient(45deg,#667eea,#764ba2);border-radius:4px;"></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#858585;">渐变背景方案</div>
+    </div>
+    <div style="flex:1;background:#252526;padding:15px;border-radius:8px;">
+      <div style="color:#4ec9b0;font-weight:bold;margin-bottom:10px;font-size:13px;">窗口 C: 方案三</div>
+      <div style="background:#fff;height:100px;border-radius:4px;display:flex;align-items:center;justify-content:center;">
+        <div style="width:80px;height:50px;background:#667eea;border-radius:4px;box-shadow:0 4px 12px rgba(102,126,234,0.5);"></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#858585;">带阴影效果</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>预览窗口技术细节</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+    <div style="background:#252526;padding:15px;border-radius:8px;">
+      <div style="color:#4a9eff;font-weight:bold;margin-bottom:8px;">渲染方式</div>
+      <ul style="color:#ccc;font-size:13px;line-height:1.8;padding-left:18px;">
+        <li>每个预览窗口是一个独立 BrowserWindow</li>
+        <li>通过 data URL 或 blob URL 注入代码</li>
+        <li>HTML 片段自动包裹完整文档结构</li>
+        <li>CSS 和 JS 直接内联注入</li>
+      </ul>
+    </div>
+    <div style="background:#252526;padding:15px;border-radius:8px;">
+      <div style="color:#c586c0;font-weight:bold;margin-bottom:8px;">安全与限制</div>
+      <ul style="color:#ccc;font-size:13px;line-height:1.8;padding-left:18px;">
+        <li>禁用外部网络请求（CSP 限制）</li>
+        <li>禁用 alert/confirm/prompt</li>
+        <li>窗口间代码隔离，互不干扰</li>
+        <li>console.log 输出捕获到主窗口</li>
+      </ul>
+    </div>
+  </div>
+</div>

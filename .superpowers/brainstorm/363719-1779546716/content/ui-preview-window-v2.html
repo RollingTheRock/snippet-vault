@@ -1,0 +1,52 @@
+<h2>预览窗口 UI 设计 (v2)</h2>
+<p class="subtitle">独立浮动窗口，适配 Linux 桌面环境</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">预览窗口（400×300，可调整大小，可多开）</div>
+    <div class="mockup-body">
+      <div style="width:380px;background:#1e1e1e;border-radius:8px;overflow:hidden;border:1px solid #3c3c3c;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
+        <!-- 标题栏 -->
+        <div style="height:36px;background:#2d2d2d;border-bottom:1px solid #3c3c3c;display:flex;align-items:center;padding:0 12px;gap:8px;">
+          <span style="color:#4a9eff;font-size:13px;font-weight:600;">[ ]</span>
+          <span style="color:#ccc;font-size:12px;flex:1;">预览: Flex 居中布局</span>
+          <div style="display:flex;gap:4px;">
+            <button style="background:transparent;border:none;color:#858585;font-size:11px;cursor:pointer;padding:4px 8px;border-radius:3px;">刷新</button>
+            <button style="background:transparent;border:none;color:#858585;font-size:11px;cursor:pointer;padding:4px 8px;border-radius:3px;">复制</button>
+            <button style="background:transparent;border:none;color:#858585;font-size:11px;cursor:pointer;padding:4px 8px;border-radius:3px;">新窗口</button>
+            <button style="background:transparent;border:none;color:#858585;font-size:16px;cursor:pointer;padding:4px 8px;border-radius:3px;">x</button>
+          </div>
+        </div>
+        
+        <!-- 渲染区域 -->
+        <div style="height:220px;background:#fff;overflow:auto;">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+            <div style="text-align:center;">
+              <div style="width:120px;height:80px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);border-radius:8px;margin:0 auto 16px;box-shadow:0 4px 15px rgba(102,126,234,0.4);"></div>
+              <div style="color:#333;font-size:14px;font-weight:500;">CSS 渐变效果</div>
+              <div style="color:#666;font-size:12px;margin-top:4px;">linear-gradient(135deg, ...)</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 底部信息栏 -->
+        <div style="padding:8px 12px;background:#252526;border-top:1px solid #3c3c3c;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#858585;">
+          <span>HTML/CSS/JS 实时渲染</span>
+          <span>窗口 #3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>窗口风格说明</h3>
+  <div style="background:#252526;padding:15px;border-radius:8px;color:#ccc;font-size:13px;line-height:1.8;">
+    <ul style="padding-left:18px;">
+      <li><b>标题栏</b>：采用应用内自定义标题栏，不模拟 macOS 或 Windows 原生样式，保持跨平台一致性</li>
+      <li><b>关闭按钮</b>：右上角 "x" 按钮，点击关闭当前预览窗口</li>
+      <li><b>图标</b>：使用简洁的符号/文字按钮替代 emoji，保持专业感</li>
+      <li><b>框架</b>：Electron BrowserWindow 的 frame 设为 false，完全自定义标题栏，适配 Fedora / GNOME / KDE</li>
+    </ul>
+  </div>
+</div>

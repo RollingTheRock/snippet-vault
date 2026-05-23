@@ -1,0 +1,89 @@
+<h2>数据模型设计</h2>
+<p class="subtitle">SQLite 表结构 + 数据流转</p>
+
+<div class="section">
+  <h3>数据库表结构</h3>
+  <div class="mockup">
+    <div class="mockup-header">SQLite Schema</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:12px;line-height:1.6;color:#d4d4d4;">
+      <div style="margin-bottom:20px;">
+        <div style="color:#c586c0;font-weight:bold;margin-bottom:8px;">-- snippets 表（代码片段）</div>
+        <div style="background:#252526;padding:12px;border-radius:6px;">
+          <span style="color:#569cd6;">CREATE TABLE</span> snippets (<br>
+          &nbsp;&nbsp;id <span style="color:#569cd6;">INTEGER PRIMARY KEY</span> AUTOINCREMENT,<br>
+          &nbsp;&nbsp;title <span style="color:#569cd6;">TEXT NOT NULL</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 片段标题</span><br>
+          &nbsp;&nbsp;content <span style="color:#569cd6;">TEXT NOT NULL</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 代码内容</span><br>
+          &nbsp;&nbsp;language <span style="color:#569cd6;">TEXT NOT NULL</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 语言类型: html/css/js/python/java...</span><br>
+          &nbsp;&nbsp;description <span style="color:#569cd6;">TEXT</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 描述说明</span><br>
+          &nbsp;&nbsp;created_at <span style="color:#569cd6;">INTEGER</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 创建时间戳</span><br>
+          &nbsp;&nbsp;updated_at <span style="color:#569cd6;">INTEGER</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 更新时间戳</span><br>
+          &nbsp;&nbsp;copy_count <span style="color:#569cd6;">INTEGER DEFAULT 0</span>&nbsp;<span style="color:#6a9955;">-- 被复制次数（可选统计）</span><br>
+          );<br>
+          <br>
+          <span style="color:#569cd6;">CREATE INDEX</span> idx_snippets_title <span style="color:#569cd6;">ON</span> snippets(title);<br>
+          <span style="color:#569cd6;">CREATE INDEX</span> idx_snippets_language <span style="color:#569cd6;">ON</span> snippets(language);
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="color:#c586c0;font-weight:bold;margin-bottom:8px;">-- tags 表（标签）</div>
+        <div style="background:#252526;padding:12px;border-radius:6px;">
+          <span style="color:#569cd6;">CREATE TABLE</span> tags (<br>
+          &nbsp;&nbsp;id <span style="color:#569cd6;">INTEGER PRIMARY KEY</span> AUTOINCREMENT,<br>
+          &nbsp;&nbsp;name <span style="color:#569cd6;">TEXT NOT NULL UNIQUE</span>,&nbsp;<span style="color:#6a9955;">-- 标签名</span><br>
+          &nbsp;&nbsp;color <span style="color:#569cd6;">TEXT</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6a9955;">-- 标签颜色 (#4a9eff)</span><br>
+          &nbsp;&nbsp;created_at <span style="color:#569cd6;">INTEGER</span><br>
+          );
+        </div>
+      </div>
+
+      <div>
+        <div style="color:#c586c0;font-weight:bold;margin-bottom:8px;">-- snippet_tags 表（多对多关联）</div>
+        <div style="background:#252526;padding:12px;border-radius:6px;">
+          <span style="color:#569cd6;">CREATE TABLE</span> snippet_tags (<br>
+          &nbsp;&nbsp;snippet_id <span style="color:#569cd6;">INTEGER NOT NULL</span>,<br>
+          &nbsp;&nbsp;tag_id <span style="color:#569cd6;">INTEGER NOT NULL</span>,<br>
+          &nbsp;&nbsp;<span style="color:#569cd6;">PRIMARY KEY</span> (snippet_id, tag_id),<br>
+          &nbsp;&nbsp;<span style="color:#569cd6;">FOREIGN KEY</span> (snippet_id) <span style="color:#569cd6;">REFERENCES</span> snippets(id) <span style="color:#569cd6;">ON DELETE CASCADE</span>,<br>
+          &nbsp;&nbsp;<span style="color:#569cd6;">FOREIGN KEY</span> (tag_id) <span style="color:#569cd6;">REFERENCES</span> tags(id) <span style="color:#569cd6;">ON DELETE CASCADE</span><br>
+          );
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>支持的语言列表</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    <div style="background:#e34c26;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">HTML</div>
+    <div style="background:#264de4;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">CSS</div>
+    <div style="background:#f7df1e;color:#000;padding:4px 12px;border-radius:4px;font-size:12px;">JavaScript</div>
+    <div style="background:#3178c6;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">TypeScript</div>
+    <div style="background:#4fc08d;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">Vue</div>
+    <div style="background:#3776ab;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">Python</div>
+    <div style="background:#007396;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">Java</div>
+    <div style="background:#00add8;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">Go</div>
+    <div style="background:#dea584;color:#000;padding:4px 12px;border-radius:4px;font-size:12px;">Rust</div>
+    <div style="background:#00599c;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">C++</div>
+    <div style="background:#239120;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">C#</div>
+    <div style="background:#f89820;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">SQL</div>
+    <div style="background:#89e051;color:#000;padding:4px 12px;border-radius:4px;font-size:12px;">Shell</div>
+    <div style="background:#cc342d;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">Ruby</div>
+    <div style="background:#6e7681;color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;">JSON</div>
+  </div>
+  <p class="subtitle" style="margin-top:8px;">前 5 种支持实时预览，其余仅语法高亮+复制</p>
+</div>
+
+<div class="section">
+  <h3>数据流转示意</h3>
+  <div style="background:#252526;padding:15px;border-radius:8px;font-size:13px;color:#ccc;line-height:1.8;">
+    <div><span style="color:#4a9eff;">快启搜索框</span> → 输入关键词 → IPC → <span style="color:#c586c0;">主进程</span> → SQLite 模糊查询 → 返回结果列表</div>
+    <div style="margin:8px 0;color:#858585;">↓ Enter（复制）</div>
+    <div><span style="color:#4a9eff;">快启搜索框</span> → IPC → <span style="color:#c586c0;">主进程</span> → 写入剪贴板 → 隐藏窗口</div>
+    <div style="margin:8px 0;color:#858585;">↓ Cmd+Enter（预览）</div>
+    <div><span style="color:#4a9eff;">快启搜索框</span> → IPC → <span style="color:#c586c0;">主进程</span> → 创建预览窗口 → 注入代码内容</div>
+    <div style="margin:8px 0;color:#858585;">↓ 主窗口 CRUD</div>
+    <div><span style="color:#c586c0;">主窗口</span> → IPC → <span style="color:#c586c0;">主进程</span> → SQLite 增删改查 → 同步更新前端状态</div>
+  </div>
+</div>
