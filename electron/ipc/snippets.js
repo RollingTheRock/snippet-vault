@@ -20,7 +20,7 @@ function registerSnippetHandlers() {
   ipcMain.handle('snippets:delete', (_, id) => snippetsRepo.remove(id))
 
   ipcMain.handle('snippets:copyToClipboard', (_, content) => {
-    clipboard.writeText(content)
+    clipboard.writeText(content || '')
     return true
   })
 

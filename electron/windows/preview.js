@@ -8,7 +8,6 @@ const previews = new Map()
 
 function createPreviewWindow(content, language) {
   previewCounter++
-  console.log(`[Preview] Creating preview #${previewCounter} for language: ${language}`)
 
   const win = new BrowserWindow({
     width: 520,
@@ -26,14 +25,12 @@ function createPreviewWindow(content, language) {
   })
 
   const isWebPreview = ['html', 'css', 'javascript', 'typescript', 'vue'].includes(language)
-  console.log(`[Preview] isWebPreview: ${isWebPreview}`)
 
   if (isWebPreview) {
     const htmlContent = buildPreviewHtml(content, language)
     const tempFile = path.join(os.tmpdir(), `snippet-vault-preview-${Date.now()}.html`)
     try {
       fs.writeFileSync(tempFile, htmlContent, 'utf-8')
-      console.log(`[Preview] Temp file written: ${tempFile}`)
       win.loadFile(tempFile)
 
       win.on('closed', () => {
@@ -46,24 +43,13 @@ function createPreviewWindow(content, language) {
       return null
     }
   } else {
-    const plainUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`
-    console.log(`[Preview] Loading plain text data URL`)
-    win.loadURL(plainUrl)
+    win.loadURL(`data:text/plain;charset=utf-8,${encodeURIComponent(content)}`)
     win.on('closed', () => {
       previews.delete(win.id)
     })
   }
 
-  win.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
-    console.error(`[Preview] did-fail-load: ${errorCode} ${errorDescription}`)
-  })
-
-  win.webContents.on('did-finish-load', () => {
-    console.log(`[Preview] did-finish-load`)
-  })
-
   win.once('ready-to-show', () => {
-    console.log(`[Preview] ready-to-show, showing window`)
     win.show()
     win.focus()
   })
