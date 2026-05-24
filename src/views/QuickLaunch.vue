@@ -85,6 +85,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AppIcon from '../components/AppIcon.vue'
+import { api } from '../api/index.js'
 
 const query = ref('')
 const results = ref([])
@@ -121,7 +122,7 @@ async function handleInput() {
       results.value = []
       return
     }
-    results.value = await window.electronAPI.searchSnippets(query.value)
+    results.value = await api.searchSnippets(query.value)
     selectedIndex.value = 0
   }, 120)
 }
@@ -129,17 +130,17 @@ async function handleInput() {
 async function handleCopy() {
   const snippet = results.value[selectedIndex.value]
   if (!snippet) return
-  await window.electronAPI.copySnippet(snippet.content, snippet.id)
+  await api.copySnippet(snippet.content, snippet.id)
 }
 
 function handlePreview() {
   const snippet = results.value[selectedIndex.value]
   if (!snippet) return
-  window.electronAPI.openPreview(snippet.content, snippet.language)
+  api.openPreview(snippet.content, snippet.language)
 }
 
 function openManager() {
-  window.electronAPI.showMainManager()
+  api.showMainManager()
 }
 
 function handleKeydown(e) {

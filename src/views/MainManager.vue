@@ -157,6 +157,7 @@
               v-show="editForm.language !== 'markdown' || mdMode !== 'preview'"
               v-model="editForm.content"
               :language="editForm.language"
+              :isDark="isDark"
               placeholder="输入代码..."
               :class="{ 'md-full': editForm.language === 'markdown' && mdMode === 'code', 'md-half': editForm.language === 'markdown' && mdMode === 'split' }"
             />
@@ -220,6 +221,25 @@
         </div>
       </Transition>
     </div>
+    <!-- Web Preview Overlay -->
+    <Transition name="fade-slide">
+      <div class="preview-overlay" v-if="previewVisible" @click="closePreview">
+        <div class="preview-panel" @click.stop>
+          <div class="preview-header">
+            <div class="preview-title">
+              <AppIcon name="eye" :size="14" />
+              <span>预览</span>
+            </div>
+            <button class="preview-close" @click="closePreview">
+              <AppIcon name="x" :size="14" />
+            </button>
+          </div>
+          <div class="preview-body">
+            <MarkdownPreview :content="previewContent" :isDark="isDark" />
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -237,6 +257,7 @@ import { useToast } from '../composables/useToast.js'
 import { useRipple } from '../composables/useRipple.js'
 import { useGlowCursor } from '../composables/useGlowCursor.js'
 import { useMagnetic } from '../composables/useMagnetic.js'
+import { api } from '../api/index.js'
 
 const snippetStore = useSnippetStore()
 const tagStore = useTagStore()
@@ -247,6 +268,28 @@ const searchQuery = ref('')
 const editForm = reactive({ title: '', content: '', language: 'javascript' })
 const currentTags = ref([])
 const mdMode = ref('split') // 'code' | 'split' | 'preview'
+
+// Web preview overlay
+const previewVisible = ref(false)
+const previewContent = ref('')
+const previewLanguage = ref('text')
+
+function openPreviewOverlay(content, language) {
+  previewContent.value = content
+  previewLanguage.value = language
+  previewVisible.value = true
+}
+
+function closePreview() {
+  previewVisible.value = false
+}
+
+// Listen for web preview events
+onMounted(() => {
+  window.addEventListener('snippet:preview', (e) => {
+    openPreviewOverlay(e.detail.content, e.detail.language)
+  })
+})
 
 const filterTabs = [
   { key: 'all', label: '全部' },
@@ -360,7 +403,7 @@ async function handleSave() {
       content: editForm.content,
       language: editForm.language
     })
-    await window.electronAPI.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
+    await api.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
     await snippetStore.loadSnippets()
     success('保存成功')
   } catch (e) {
@@ -380,7 +423,7 @@ async function handleDelete() {
 
 async function handleExport() {
   try {
-    await window.electronAPI.exportSnippets()
+    await api.exportSnippets()
     success('导出成功')
   } catch (e) {
     showError('导出失败')
@@ -389,7 +432,7 @@ async function handleExport() {
 
 async function handleImport() {
   try {
-    await window.electronAPI.importSnippets()
+    await api.importSnippets()
     await snippetStore.loadSnippets()
     success('导入成功')
   } catch (e) {
@@ -399,21 +442,25 @@ async function handleImport() {
 
 async function handleCopy() {
   if (selectedSnippet.value) {
-    await window.electronAPI.copySnippet(selectedSnippet.value.content, selectedSnippet.value.id)
+    await api.copySnippet(selectedSnippet.value.content, selectedSnippet.value.id)
     success('已复制到剪贴板')
   }
 }
 
 function handlePreview() {
   if (selectedSnippet.value) {
-    window.electronAPI.openPreview(selectedSnippet.value.content, selectedSnippet.value.language)
+    if (!window.electronAPI) {
+      openPreviewOverlay(selectedSnippet.value.content, selectedSnippet.value.language)
+    } else {
+      api.openPreview(selectedSnippet.value.content, selectedSnippet.value.language)
+    }
   }
 }
 
 function handleManagerKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === ' ') {
     e.preventDefault()
-    window.electronAPI.toggleQuickLaunch()
+    api.toggleQuickLaunch()
   }
 }
 
@@ -1078,6 +1125,68 @@ onMounted(() => {
 }
 [data-theme="dark"] .empty-shortcut kbd {
   background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+/* ── Preview Overlay ── */
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.preview-panel {
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border-subtle);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  box-shadow: var(--inset-divider-bottom);
+}
+.preview-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.preview-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.preview-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.preview-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
 }
 
 /* ── Transitions ── */

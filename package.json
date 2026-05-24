@@ -7,7 +7,10 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "dist": "electron-vite build && electron-builder"
+    "dist": "electron-vite build && electron-builder",
+    "dev:web": "vite --config vite.web.config.js",
+    "build:web": "vite build --config vite.web.config.js",
+    "preview:web": "vite preview --config vite.web.config.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",

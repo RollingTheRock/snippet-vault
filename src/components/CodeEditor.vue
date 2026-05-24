@@ -48,11 +48,12 @@ const props = defineProps({
   modelValue: String,
   language: String,
   placeholder: String,
-  showLineNumbers: { type: Boolean, default: true }
+  showLineNumbers: { type: Boolean, default: true },
+  isDark: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue'])
 
-const { highlight } = useHighlighter()
+const { highlight, ready: hlReady } = useHighlighter()
 const isFocused = ref(false)
 const textareaRef = ref(null)
 const highlightRef = ref(null)
@@ -60,8 +61,10 @@ const editorBodyRef = ref(null)
 const activeLine = ref(1)
 
 const highlightedHtml = computed(() => {
+  // Include hlReady to trigger re-computation when highlighter initializes
+  void hlReady.value
   const code = props.modelValue || ''
-  return highlight(code, props.language)
+  return highlight(code, props.language, props.isDark ? 'dark' : 'light')
 })
 
 const lineCount = computed(() => {
@@ -263,6 +266,24 @@ watch(() => props.modelValue, () => {
 .code-textarea::-webkit-scrollbar-track,
 .highlight-layer::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* ── Dark mode overrides ── */
+[data-theme="dark"] .editor-container {
+  background: linear-gradient(180deg, #2c2c2e 0%, #252527 100%);
+}
+[data-theme="dark"] .line-numbers {
+  background: linear-gradient(180deg, #2a2a2c 0%, #242426 100%);
+  border-right-color: rgba(255,255,255,0.06);
+}
+[data-theme="dark"] .line-number {
+  color: #636366;
+}
+[data-theme="dark"] .line-number.active {
+  color: #a1a1a6;
+}
+[data-theme="dark"] .code-textarea::placeholder {
+  color: #636366;
 }
 
 .code-textarea::-webkit-scrollbar-thumb,

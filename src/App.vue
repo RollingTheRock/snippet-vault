@@ -1,5 +1,10 @@
 <template>
-  <component :is="currentView" />
+  <template v-if="isElectron">
+    <component :is="currentView" />
+  </template>
+  <template v-else>
+    <router-view />
+  </template>
   <ToastContainer :toasts="toasts" />
 </template>
 
@@ -11,6 +16,8 @@ import ToastContainer from './components/ToastContainer.vue'
 import { useToast } from './composables/useToast.js'
 
 const { toasts } = useToast()
+
+const isElectron = typeof window !== 'undefined' && !!window.electronAPI
 
 function getWindowType() {
   const params = new URLSearchParams(window.location.search)
@@ -55,9 +62,12 @@ body {
 #app {
   width: 100vw;
   height: 100vh;
-  border-radius: 12px;
   overflow: hidden;
   background: linear-gradient(180deg, #f0f0f2 0%, #e8e8ec 100%);
+}
+
+#app[data-electron="true"] {
+  border-radius: 12px;
   box-shadow:
     0 0 0 0.5px rgba(0,0,0,0.06),
     0 25px 50px -12px rgba(0,0,0,0.16),
