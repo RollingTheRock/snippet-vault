@@ -5,6 +5,12 @@ const snippetsRepo = require('../db/snippets')
 function registerSnippetHandlers() {
   ipcMain.handle('snippets:getAll', () => snippetsRepo.getAll())
 
+  ipcMain.handle('snippets:getRecent', (_, limit) => snippetsRepo.getRecent(limit))
+
+  ipcMain.handle('snippets:getFrequent', (_, limit) => snippetsRepo.getFrequent(limit))
+
+  ipcMain.handle('snippets:getByTag', (_, tagId) => snippetsRepo.getByTag(tagId))
+
   ipcMain.handle('snippets:search', (_, query) => snippetsRepo.search(query))
 
   ipcMain.handle('snippets:create', (_, data) => {
@@ -17,10 +23,16 @@ function registerSnippetHandlers() {
     return snippet
   })
 
-  ipcMain.handle('snippets:delete', (_, id) => snippetsRepo.remove(id))
+  ipcMain.handle('snippets:delete', (_, id) => {
+    snippetsRepo.remove(id)
+    return true
+  })
 
-  ipcMain.handle('snippets:copyToClipboard', (_, content) => {
+  ipcMain.handle('snippets:copyToClipboard', (_, content, snippetId) => {
     clipboard.writeText(content || '')
+    if (snippetId) {
+      snippetsRepo.incrementCopyCount(snippetId)
+    }
     return true
   })
 

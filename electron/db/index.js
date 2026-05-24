@@ -5,6 +5,7 @@ const { app } = require('electron')
 const dbPath = path.join(app.getPath('userData'), 'snippet-vault.db')
 const db = new Database(dbPath)
 
+// ── Schema ──
 db.exec(`
   CREATE TABLE IF NOT EXISTS snippets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -14,7 +15,8 @@ db.exec(`
     description TEXT,
     created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
     updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
-    copy_count INTEGER DEFAULT 0
+    copy_count INTEGER DEFAULT 0,
+    last_used_at INTEGER DEFAULT 0
   );
 
   CREATE INDEX IF NOT EXISTS idx_snippets_title ON snippets(title);
@@ -35,5 +37,12 @@ db.exec(`
     FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
   );
 `)
+
+// ── Migrations ──
+const columns = db.prepare("PRAGMA table_info(snippets)").all()
+const hasLastUsedAt = columns.some(c => c.name === 'last_used_at')
+if (!hasLastUsedAt) {
+  db.exec(`ALTER TABLE snippets ADD COLUMN last_used_at INTEGER DEFAULT 0`)
+}
 
 module.exports = db

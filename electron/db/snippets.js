@@ -8,6 +8,45 @@ const getAll = () => {
   return snippets
 }
 
+const getRecent = (limit = 10) => {
+  const snippets = db.prepare(`
+    SELECT * FROM snippets
+    WHERE last_used_at > 0
+    ORDER BY last_used_at DESC
+    LIMIT ?
+  `).all(limit)
+  for (const snippet of snippets) {
+    snippet.tags = getTags(snippet.id)
+  }
+  return snippets
+}
+
+const getFrequent = (limit = 10) => {
+  const snippets = db.prepare(`
+    SELECT * FROM snippets
+    WHERE copy_count > 0
+    ORDER BY copy_count DESC, updated_at DESC
+    LIMIT ?
+  `).all(limit)
+  for (const snippet of snippets) {
+    snippet.tags = getTags(snippet.id)
+  }
+  return snippets
+}
+
+const getByTag = (tagId) => {
+  const snippets = db.prepare(`
+    SELECT s.* FROM snippets s
+    JOIN snippet_tags st ON s.id = st.snippet_id
+    WHERE st.tag_id = ?
+    ORDER BY s.updated_at DESC
+  `).all(tagId)
+  for (const snippet of snippets) {
+    snippet.tags = getTags(snippet.id)
+  }
+  return snippets
+}
+
 const getById = (id) => {
   const snippet = db.prepare('SELECT * FROM snippets WHERE id = ?').get(id)
   if (snippet) snippet.tags = getTags(id)
@@ -52,7 +91,11 @@ const remove = (id) => {
 }
 
 const incrementCopyCount = (id) => {
-  db.prepare('UPDATE snippets SET copy_count = copy_count + 1 WHERE id = ?').run(id)
+  db.prepare(`
+    UPDATE snippets
+    SET copy_count = copy_count + 1, last_used_at = (strftime('%s', 'now') * 1000)
+    WHERE id = ?
+  `).run(id)
 }
 
 const getTags = (snippetId) => {
@@ -71,4 +114,7 @@ const setTags = (snippetId, tagIds) => {
   }
 }
 
-module.exports = { getAll, getById, search, create, update, remove, incrementCopyCount, getTags, setTags }
+module.exports = {
+  getAll, getRecent, getFrequent, getByTag, getById, search,
+  create, update, remove, incrementCopyCount, getTags, setTags
+}
