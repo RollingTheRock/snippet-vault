@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
+    "github-markdown-css": "^5.9.0",
+    "markdown-it": "^14.2.0",
     "pinia": "^2.1.7",
     "shiki": "^1.10.0",
     "vue": "^3.4.0",

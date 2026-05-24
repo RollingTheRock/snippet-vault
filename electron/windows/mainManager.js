@@ -11,13 +11,15 @@ function createMainManagerWindow() {
   }
 
   mainManagerWindow = new BrowserWindow({
-    width: 900,
-    height: 650,
-    minWidth: 700,
-    minHeight: 500,
+    width: 1200,
+    height: 760,
+    minWidth: 900,
+    minHeight: 560,
     show: false,
     frame: false,
     titleBarStyle: 'hidden',
+    transparent: true,
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

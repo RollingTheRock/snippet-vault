@@ -11,10 +11,10 @@ function createQuickLaunchWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
 
   quickLaunchWindow = new BrowserWindow({
-    width: 600,
-    height: 450,
-    x: Math.round((width - 600) / 2),
-    y: Math.round((height - 450) / 3),
+    width: 640,
+    height: 400,
+    x: Math.round((width - 640) / 2),
+    y: Math.round((height - 400) / 3),
     show: false,
     frame: false,
     skipTaskbar: true,

@@ -5,11 +5,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Snippets
   getSnippets: () => ipcRenderer.invoke('snippets:getAll'),
+  getRecentSnippets: (limit) => ipcRenderer.invoke('snippets:getRecent', limit),
+  getFrequentSnippets: (limit) => ipcRenderer.invoke('snippets:getFrequent', limit),
+  getSnippetsByTag: (tagId) => ipcRenderer.invoke('snippets:getByTag', tagId),
   searchSnippets: (query) => ipcRenderer.invoke('snippets:search', query),
   createSnippet: (data) => ipcRenderer.invoke('snippets:create', data),
   updateSnippet: (id, data) => ipcRenderer.invoke('snippets:update', id, data),
   deleteSnippet: (id) => ipcRenderer.invoke('snippets:delete', id),
-  copySnippet: (content) => ipcRenderer.invoke('snippets:copyToClipboard', content),
+  copySnippet: (content, snippetId) => ipcRenderer.invoke('snippets:copyToClipboard', content, snippetId),
   getSnippetTags: (id) => ipcRenderer.invoke('snippets:getTags', id),
   setSnippetTags: (id, tagIds) => ipcRenderer.invoke('snippets:setTags', id, tagIds),
   exportSnippets: () => ipcRenderer.invoke('snippets:export'),
