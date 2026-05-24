@@ -1,13 +1,95 @@
+/* ═══════════════════════════════════════════
+   SnippetVault Design System — macOS Elevation
+   ═══════════════════════════════════════════ */
+
 :root {
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-tertiary: #2d2d2d;
-  --border-color: #3c3c3c;
-  --text-primary: #d4d4d4;
-  --text-secondary: #858585;
-  --accent-blue: #4a9eff;
-  --accent-purple: #c586c0;
-  --accent-green: #4ec9b0;
-  --button-primary: #0e639c;
-  --selection-bg: #37373d;
+  /* ── macOS Neutral Gray Palette ── */
+  /* Base: not blue-gray, not warm-gray — pure neutral like Apple's system gray */
+  --bg-canvas: #ececef;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-tertiary: #e8e8ed;
+  --bg-sunken: #e5e5ea;
+  --bg-elevated: #ffffff;
+
+  /* ── Text (Apple's system gray scale) ── */
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #a1a1a6;
+  --text-on-accent: #ffffff;
+
+  /* ── Border (nearly invisible, light only) ── */
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.12);
+
+  /* ── 3D Elevation Shadows ── */
+  /* Inset dividers: hairline separators with top highlight */
+  --inset-divider-bottom: inset 0 -0.5px 0 rgba(0, 0, 0, 0.08);
+  --inset-divider-right: inset -0.5px 0 0 rgba(0, 0, 0, 0.06);
+  --inset-divider-top: inset 0 0.5px 0 rgba(0, 0, 0, 0.06);
+
+  /* Sunken (inputs, wells): dark at top, light at bottom — light from above */
+  --inset-sunken: inset 0 0.5px 2px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(0, 0, 0, 0.03);
+  --inset-sunken-strong: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+
+  /* Raised highlight: top white shine for buttons, cards */
+  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --highlight-top-strong: inset 0 1px 0 rgba(255, 255, 255, 1);
+
+  /* ── Accent (Apple blue) ── */
+  --accent-blue: #0071e3;
+  --accent-blue-soft: #2997ff;
+  --accent-blue-bg: rgba(0, 113, 227, 0.08);
+  --accent-purple: #af52de;
+  --accent-green: #34c759;
+  --accent-orange: #ff9500;
+  --accent-red: #ff3b30;
+
+  /* ── Button System ── */
+  --button-primary: #0071e3;
+  --button-primary-hover: #0077ed;
+  --button-primary-active: #0068c9;
+  --button-secondary-bg: #ffffff;
+  --button-secondary-hover: #f5f5f7;
+  --button-secondary-active: #e8e8ed;
+
+  /* ── Selection ── */
+  --selection-bg: rgba(0, 113, 227, 0.1);
+  --selection-border: rgba(0, 113, 227, 0.25);
+
+  /* ── Shadow Scale (macOS style: soft, diffused) ── */
+  --shadow-xs: 0 0.5px 1px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.1);
+
+  /* ── Language Colors (unchanged) ── */
+  --lang-js: #f7df1e;
+  --lang-ts: #3178c6;
+  --lang-html: #e34c26;
+  --lang-css: #264de4;
+  --lang-vue: #42b883;
+  --lang-python: #3776ab;
+  --lang-java: #b07219;
+  --lang-go: #00add8;
+  --lang-rust: #dea584;
+  --lang-cpp: #f34b7d;
+  --lang-csharp: #178600;
+  --lang-sql: #e38c00;
+  --lang-shell: #89e051;
+  --lang-ruby: #701516;
+  --lang-json: #292929;
+
+  /* ── Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* ── Transition ── */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
 }
