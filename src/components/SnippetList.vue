@@ -19,6 +19,7 @@
           </div>
           <div class="snippet-meta">
             <span class="snippet-lang">{{ snippet.language }}</span>
+            <span v-if="snippet.updated_at" class="snippet-time">{{ formatTime(snippet.updated_at) }}</span>
             <span v-if="snippet.tags?.length" class="snippet-tags">
               <span
                 v-for="tag in snippet.tags.slice(0, 2)"
@@ -48,6 +49,17 @@ import AppIcon from './AppIcon.vue'
 
 defineProps({ snippets: Array, selectedId: Number })
 defineEmits(['select'])
+
+function formatTime(ts) {
+  const diff = Date.now() - ts
+  const min = 60 * 1000
+  const hour = 60 * min
+  const day = 24 * hour
+  if (diff < min) return '刚刚'
+  if (diff < hour) return Math.floor(diff / min) + '分钟前'
+  if (diff < day) return Math.floor(diff / hour) + '小时前'
+  return new Date(ts).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
 
 function getLangColor(lang) {
   const colors = {
@@ -138,6 +150,11 @@ function getLangColor(lang) {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.snippet-time {
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  font-weight: 500;
 }
 .snippet-lang {
   color: var(--text-tertiary);

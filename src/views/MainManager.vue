@@ -132,10 +132,18 @@
               :class="{ active: noteStore.selectedId === note.id }"
               @click="noteStore.selectedId = note.id"
             >
-              <div class="note-title">{{ note.title || '未命名笔记' }}</div>
+              <div class="note-title-row">
+                <span class="note-title">{{ note.title || '未命名笔记' }}</span>
+                <span v-if="note.updated_at" class="note-time">{{ formatTime(note.updated_at) }}</span>
+              </div>
               <div class="note-preview">{{ note.content.substring(0, 60).replace(/\n/g, ' ') }}...</div>
               <div class="note-meta">
-                <span v-for="tag in note.tags" :key="tag.id" class="note-tag" :style="{ color: tag.color }">
+                <span
+                  v-for="tag in (note.tags || []).slice(0, 3)"
+                  :key="tag.id"
+                  class="note-tag-pill"
+                  :style="{ background: tag.color + '14', color: tag.color, borderColor: tag.color + '25' }"
+                >
                   {{ tag.name }}
                 </span>
               </div>
@@ -252,44 +260,7 @@
           </div>
         </div>
 
-        <div class="empty-state" v-else-if="activeModule === 'snippets'" key="snippet-empty" ref="emptyStateRef">
-          <!-- Glow cursor -->
-          <div class="glow-cursor" :style="{
-            left: `${emptyGlow.x.value}px`,
-            top: `${emptyGlow.y.value}px`,
-            opacity: emptyGlow.visible.value ? 1 : 0
-          }" />
-          <div class="empty-art">
-            <div class="art-window">
-              <div class="art-window-header">
-                <span class="art-dot red" />
-                <span class="art-dot yellow" />
-                <span class="art-dot green" />
-              </div>
-              <div class="art-window-body">
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-bracket" />
-              </div>
-            </div>
-            <div class="art-floating art-float-1">
-              <AppIcon name="code" :size="16" />
-            </div>
-            <div class="art-floating art-float-2">
-              <AppIcon name="tag" :size="14" />
-            </div>
-            <div class="art-floating art-float-3">
-              <AppIcon name="zap" :size="12" />
-            </div>
-          </div>
-          <h3>选择一个片段或创建新片段</h3>
-          <p>使用左侧浏览已有片段，或点击上方「新建」开始</p>
-          <div class="empty-shortcut">
-            <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd>
-            <span>快速启动</span>
-          </div>
-        </div>
+        <EmptyState v-else-if="activeModule === 'snippets'" module="snippets" key="snippet-empty" @create="handleNew" />
 
         <!-- Notes Editor -->
         <div class="editor-area" v-else-if="activeModule === 'notes' && noteStore.selectedNote" key="note-editor">
@@ -338,22 +309,7 @@
           </div>
         </div>
 
-        <div class="empty-state" v-else-if="activeModule === 'notes'" key="note-empty">
-          <div class="empty-art">
-            <div class="art-window">
-              <div class="art-window-header">
-                <span class="art-dot red" /><span class="art-dot yellow" /><span class="art-dot green" />
-              </div>
-              <div class="art-window-body">
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-bracket" />
-              </div>
-            </div>
-            <div class="art-floating art-float-1"><AppIcon name="file-text" :size="16" /></div>
-          </div>
-          <h3>选择一个笔记或创建新笔记</h3>
-          <p>使用左侧浏览已有笔记，或点击上方「新建」开始</p>
-        </div>
+        <EmptyState v-else-if="activeModule === 'notes'" module="notes" key="note-empty" @create="handleNew" />
 
         <!-- HTTP Client -->
         <div class="http-client" v-else-if="activeModule === 'http'" key="http-client">
@@ -452,6 +408,25 @@
         </div>
       </Transition>
     </div>
+    <!-- Command Palette -->
+    <CommandPalette
+      ref="commandPaletteRef"
+      :snippets="snippetStore.snippets"
+      :notes="noteStore.notes"
+      :activeModule="activeModule"
+      @selectSnippet="id => { activeModule = 'snippets'; snippetStore.selectedId = id }"
+      @selectNote="id => { activeModule = 'notes'; noteStore.selectedId = id }"
+      @switchModule="mod => activeModule = mod"
+      @newSnippet="handleNew"
+      @newNote="handleNew"
+      @resetHttp="handleNew"
+      @toggleTheme="toggleTheme"
+      @exportData="handleExport"
+      @importData="handleImport"
+      @preview="handlePreview"
+      @copy="handleCopy"
+    />
+
     <!-- Web Preview Overlay -->
     <Transition name="fade-slide">
       <div class="preview-overlay" v-if="previewVisible" @click="closePreview">
@@ -505,6 +480,8 @@ import SnippetList from '../components/SnippetList.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import TagInput from '../components/TagInput.vue'
 import MarkdownPreview from '../components/MarkdownPreview.vue'
+import EmptyState from '../components/EmptyState.vue'
+import CommandPalette from '../components/CommandPalette.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useToast } from '../composables/useToast.js'
 import { useRipple } from '../composables/useRipple.js'
@@ -571,14 +548,12 @@ const filterTabs = [
 
 const btnNew = ref(null)
 const editorAreaRef = ref(null)
-const emptyStateRef = ref(null)
 const autoSaveStatus = ref('')
 
 useRipple(btnNew)
 
-// Glow cursor for editor and empty state
+// Glow cursor for editor
 const editorGlow = useGlowCursor(editorAreaRef)
-const emptyGlow = useGlowCursor(emptyStateRef)
 
 const languages = [
   { value: 'html', label: 'HTML' },
@@ -668,6 +643,17 @@ function formatBytes(b) {
   if (b < 1024) return b + ' B'
   if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB'
   return (b / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts
+  const min = 60 * 1000
+  const hour = 60 * min
+  const day = 24 * hour
+  if (diff < min) return '刚刚'
+  if (diff < hour) return Math.floor(diff / min) + '分钟前'
+  if (diff < day) return Math.floor(diff / hour) + '小时前'
+  return new Date(ts).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
 function openCommandPalette() {
@@ -1670,14 +1656,27 @@ onMounted(() => {
   border-color: rgba(0, 113, 227, 0.12);
 }
 
+.note-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
 .note-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+.note-time {
+  font-size: 9.5px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .note-preview {
@@ -1706,6 +1705,14 @@ onMounted(() => {
 
 [data-theme="dark"] .note-tag {
   background: rgba(255,255,255,0.06);
+}
+
+.note-tag-pill {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 0.5px solid transparent;
 }
 
 /* ── Preview Overlay ── */
