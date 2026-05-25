@@ -1,34 +1,25 @@
 <template>
   <div class="main-manager" tabindex="-1" @keydown="handleManagerKeydown">
-    <!-- Toolbar -->
-    <div class="toolbar">
+    <!-- Title Bar -->
+    <div class="title-bar">
       <div class="brand">
         <div class="brand-icon">
-          <AppIcon name="layout" :size="17" />
+          <AppIcon name="layout" :size="16" />
         </div>
         <span>SnippetVault</span>
       </div>
-      <div class="toolbar-actions">
-        <button ref="btnNew" class="btn btn-primary" @click="handleNew" :style="{ transform: `translate(${magNew.offsetX.value}px, ${magNew.offsetY.value}px)` }">
+
+      <button class="cmd-palette-trigger" @click="openCommandPalette">
+        <AppIcon name="search" :size="13" />
+        <span>搜索命令...</span>
+        <kbd class="cmd-kbd">⌘K</kbd>
+      </button>
+
+      <div class="title-bar-actions">
+        <button ref="btnNew" class="btn btn-primary" @click="handleNew">
           <AppIcon name="plus" :size="13" />
           <span>新建</span>
         </button>
-        <button ref="btnSave" class="btn btn-secondary" @click="handleSave" :disabled="!hasChanges" :style="{ transform: `translate(${magSave.offsetX.value}px, ${magSave.offsetY.value}px)` }">
-          <AppIcon name="save" :size="13" />
-          <span>保存</span>
-        </button>
-        <button ref="btnDelete" class="btn btn-secondary btn-danger" @click="handleDelete" :disabled="!selectedId" :style="{ transform: `translate(${magDelete.offsetX.value}px, ${magDelete.offsetY.value}px)` }">
-          <AppIcon name="trash" :size="13" />
-          <span>删除</span>
-        </button>
-        <div class="toolbar-divider" />
-        <button ref="btnExport" class="btn btn-ghost" @click="handleExport">
-          <AppIcon name="download" :size="13" />
-        </button>
-        <button ref="btnImport" class="btn btn-ghost" @click="handleImport">
-          <AppIcon name="upload" :size="13" />
-        </button>
-        <div class="toolbar-divider" />
         <button class="btn btn-ghost theme-toggle" @click="toggleTheme" :title="isDark ? '切换浅色' : '切换深色'">
           <AppIcon :name="isDark ? 'sun' : 'moon'" :size="14" />
         </button>
@@ -37,9 +28,10 @@
 
     <!-- Content -->
     <div class="content">
+      <ActivityBar v-model="activeModule" />
+
       <!-- Sidebar -->
       <div class="sidebar">
-        <ActivityBar v-model="activeModule" />
         <div v-if="activeModule === 'snippets'" class="module-panel">
         <div class="search-wrapper">
           <AppIcon name="search" :size="14" class="search-icon" />
@@ -479,6 +471,26 @@
         </div>
       </div>
     </Transition>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-left">
+        <span v-if="autoSaveStatus" class="status-save-indicator">
+          <AppIcon :name="autoSaveStatus === 'saved' ? 'check' : 'loader'" :size="10" />
+          {{ autoSaveStatus === 'saved' ? '已保存' : '保存中...' }}
+        </span>
+      </div>
+      <div class="status-center">
+        <span v-if="activeModule === 'snippets' && selectedSnippet" class="status-item">
+          {{ selectedSnippet.language === 'markdown' ? 'Markdown' : selectedSnippet.language }}
+        </span>
+        <span v-else-if="activeModule === 'notes' && noteStore.selectedNote" class="status-item">Markdown</span>
+        <span v-else-if="activeModule === 'http'" class="status-item">HTTP Client</span>
+      </div>
+      <div class="status-right">
+        <span v-if="editorStats" class="status-item">{{ editorStats }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -558,31 +570,15 @@ const filterTabs = [
 ]
 
 const btnNew = ref(null)
-const btnSave = ref(null)
-const btnDelete = ref(null)
-const btnExport = ref(null)
-const btnImport = ref(null)
-const btnPreview = ref(null)
-const btnCopy = ref(null)
 const editorAreaRef = ref(null)
 const emptyStateRef = ref(null)
+const autoSaveStatus = ref('')
 
 useRipple(btnNew)
-useRipple(btnSave)
-useRipple(btnDelete)
-useRipple(btnExport)
-useRipple(btnImport)
-useRipple(btnPreview)
-useRipple(btnCopy)
 
 // Glow cursor for editor and empty state
 const editorGlow = useGlowCursor(editorAreaRef)
 const emptyGlow = useGlowCursor(emptyStateRef)
-
-// Magnetic buttons
-const magNew = useMagnetic(btnNew, { strength: 0.25, radius: 80 })
-const magSave = useMagnetic(btnSave, { strength: 0.25, radius: 80 })
-const magDelete = useMagnetic(btnDelete, { strength: 0.25, radius: 80 })
 
 const languages = [
   { value: 'html', label: 'HTML' },
@@ -603,32 +599,80 @@ const languages = [
   { value: 'markdown', label: 'Markdown' }
 ]
 
+const selectedSnippet = computed(() => snippetStore.selectedSnippet)
 const selectedId = computed(() => {
   if (activeModule.value === 'notes') return noteStore.selectedId
   if (activeModule.value === 'http') return !!httpStore.url
   return snippetStore.selectedId
 })
-const selectedSnippet = computed(() => snippetStore.selectedSnippet)
-const hasChanges = computed(() => {
-  if (activeModule.value === 'notes') {
-    const note = noteStore.selectedNote
-    if (!note) return false
-    const tagsChanged = JSON.stringify((note.tags || []).map(t => t.id).sort()) !==
-      JSON.stringify(noteCurrentTags.value.map(t => t.id).sort())
-    return noteEditForm.title !== note.title ||
-      noteEditForm.content !== note.content || tagsChanged
+
+// Auto-save
+let saveTimer = null
+function triggerAutoSave() {
+  autoSaveStatus.value = 'saving'
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    try {
+      if (activeModule.value === 'notes' && noteStore.selectedId) {
+        await noteStore.updateNote(noteStore.selectedId, {
+          title: noteEditForm.title,
+          content: noteEditForm.content
+        })
+        await api.setNoteTags(noteStore.selectedId, noteCurrentTags.value.map(t => t.id))
+        await noteStore.loadNotes()
+      } else if (activeModule.value === 'snippets' && snippetStore.selectedId) {
+        await snippetStore.updateSnippet(snippetStore.selectedId, {
+          title: editForm.title,
+          content: editForm.content,
+          language: editForm.language
+        })
+        await api.setSnippetTags(snippetStore.selectedId, currentTags.value.map(t => t.id))
+        await snippetStore.loadSnippets()
+      }
+      autoSaveStatus.value = 'saved'
+      setTimeout(() => { autoSaveStatus.value = '' }, 2000)
+    } catch (e) {
+      autoSaveStatus.value = ''
+    }
+  }, 800)
+}
+
+watch(() => [noteEditForm.title, noteEditForm.content, noteCurrentTags.value], () => {
+  if (activeModule.value === 'notes' && noteStore.selectedId) triggerAutoSave()
+}, { deep: true })
+
+watch(() => [editForm.title, editForm.content, editForm.language, currentTags.value], () => {
+  if (activeModule.value === 'snippets' && snippetStore.selectedId) triggerAutoSave()
+}, { deep: true })
+
+// Status bar stats
+const editorStats = computed(() => {
+  if (activeModule.value === 'snippets' && selectedSnippet.value) {
+    const lines = (editForm.content.match(/\n/g) || []).length + 1
+    const chars = editForm.content.length
+    return `${lines} 行 · ${chars} 字符`
   }
-  if (activeModule.value === 'http') {
-    return !!httpStore.url
+  if (activeModule.value === 'notes' && noteStore.selectedNote) {
+    const lines = (noteEditForm.content.match(/\n/g) || []).length + 1
+    const chars = noteEditForm.content.length
+    return `${lines} 行 · ${chars} 字符`
   }
-  if (!selectedSnippet.value) return false
-  const tagsChanged = JSON.stringify((selectedSnippet.value.tags || []).map(t => t.id).sort()) !==
-    JSON.stringify(currentTags.value.map(t => t.id).sort())
-  return editForm.title !== selectedSnippet.value.title ||
-    editForm.content !== selectedSnippet.value.content ||
-    editForm.language !== selectedSnippet.value.language ||
-    tagsChanged
+  if (activeModule.value === 'http' && httpStore.response) {
+    const size = new Blob([httpStore.response.body]).size
+    return `${httpStore.response.status} · ${httpStore.response.time}ms · ${formatBytes(size)}`
+  }
+  return ''
 })
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B'
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB'
+  return (b / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function openCommandPalette() {
+  window.dispatchEvent(new CustomEvent('app:command-palette'))
+}
 
 watch(selectedSnippet, async (snippet) => {
   if (snippet) {
@@ -836,25 +880,25 @@ onMounted(() => {
 }
 
 /* ── Toolbar ── */
-.toolbar {
-  height: 48px;
+.title-bar {
+  height: 40px;
   background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(250,250,252,0.92) 100%);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
   box-shadow: var(--inset-divider-bottom), 0 0.5px 2px rgba(0,0,0,0.03);
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 14px;
+  padding: 0 14px;
+  gap: 12px;
   -webkit-app-region: drag;
   position: relative;
   z-index: 20;
   flex-shrink: 0;
 }
-[data-theme="dark"] .toolbar {
+[data-theme="dark"] .title-bar {
   background: linear-gradient(180deg, rgba(44,44,46,0.9) 0%, rgba(58,58,60,0.92) 100%);
 }
-.toolbar > * {
+.title-bar > * {
   -webkit-app-region: no-drag;
 }
 .brand {
@@ -863,15 +907,15 @@ onMounted(() => {
   gap: 8px;
   color: var(--text-primary);
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.35px;
+  font-size: 13.5px;
+  letter-spacing: -0.3px;
 }
 .brand-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   background: linear-gradient(180deg, #e8f4fd 0%, #d0e8fa 100%);
   color: var(--accent-blue);
   border-radius: var(--radius-sm);
@@ -880,22 +924,54 @@ onMounted(() => {
 [data-theme="dark"] .brand-icon {
   background: linear-gradient(180deg, #1c3a5c 0%, #0d2137 100%);
 }
-.toolbar-actions {
+.title-bar-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
 }
-.toolbar-divider {
-  width: 1px;
-  height: 18px;
-  background: var(--border-color);
-  margin: 0 2px;
+.cmd-palette-trigger {
+  flex: 1;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  border: 0.5px solid var(--border-subtle);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--inset-sunken);
+}
+[data-theme="dark"] .cmd-palette-trigger {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.cmd-palette-trigger:hover {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+.cmd-palette-trigger span {
+  flex: 1;
+  text-align: left;
+}
+.cmd-kbd {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 0.5px solid var(--border-subtle);
+  font-family: 'SF Mono', monospace;
 }
 .theme-toggle {
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -981,6 +1057,49 @@ onMounted(() => {
 }
 [data-theme="dark"] .btn-ghost:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Status Bar ── */
+.status-bar {
+  height: 24px;
+  background: linear-gradient(180deg, rgba(250,250,252,0.95) 0%, rgba(240,240,242,0.95) 100%);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: var(--inset-divider-top);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  z-index: 20;
+}
+[data-theme="dark"] .status-bar {
+  background: linear-gradient(180deg, rgba(28,28,30,0.95) 0%, rgba(22,22,24,0.95) 100%);
+}
+.status-left,
+.status-center,
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 80px;
+}
+.status-center {
+  justify-content: center;
+}
+.status-right {
+  justify-content: flex-end;
+}
+.status-item {
+  font-variant-numeric: tabular-nums;
+}
+.status-save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-green);
+  font-weight: 500;
 }
 
 /* ═══════════════════════════════════════
