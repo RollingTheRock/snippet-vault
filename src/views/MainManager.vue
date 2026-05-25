@@ -87,6 +87,7 @@
           :snippets="snippetStore.snippets"
           :selectedId="snippetStore.selectedId"
           @select="snippetStore.selectedId = $event"
+          @reorder="ids => { /* drag reorder */ }"
         />
         </div>
         <div v-else-if="activeModule === 'notes'" key="sb-notes" class="module-panel">
@@ -127,11 +128,15 @@
           </div>
           <div class="note-list">
             <div
-              v-for="note in noteStore.notes"
+              v-for="(note, i) in noteStore.notes"
               :key="note.id"
               class="note-item"
               :class="{ active: noteStore.selectedId === note.id }"
+              draggable="true"
               @click="noteStore.selectedId = note.id"
+              @dragstart="noteDragId = note.id; noteDragFrom = i"
+              @dragover.prevent
+              @drop="handleNoteDrop(i)"
             >
               <div class="note-title-row">
                 <span class="note-title">{{ note.title || '未命名笔记' }}</span>
@@ -257,6 +262,18 @@
             <button ref="btnPreview" class="btn btn-primary" @click="handlePreview">
               <AppIcon name="eye" :size="13" />
               <span>预览</span>
+            </button>
+            <button
+              v-if="['html','css','javascript'].includes(editForm.language)"
+              class="btn btn-secondary"
+              @click="runCode"
+            >
+              <AppIcon name="zap" :size="13" />
+              <span>运行</span>
+            </button>
+            <button class="btn btn-secondary" @click="openScreenshot">
+              <AppIcon name="download" :size="13" />
+              <span>导出图片</span>
             </button>
             <button ref="btnCopy" class="btn btn-secondary" @click="handleCopy">
               <AppIcon name="copy" :size="13" />
@@ -416,6 +433,9 @@
         </div>
       </Transition>
     </div>
+    <!-- Code Screenshot -->
+    <CodeScreenshot ref="screenshotRef" />
+
     <!-- Command Palette -->
     <CommandPalette
       ref="commandPaletteRef"
@@ -434,6 +454,26 @@
       @preview="handlePreview"
       @copy="handleCopy"
     />
+
+    <!-- Code Run Sandbox -->
+    <Transition name="fade-slide">
+      <div class="preview-overlay" v-if="runVisible" @click="runVisible = false">
+        <div class="preview-panel" @click.stop>
+          <div class="preview-header">
+            <div class="preview-title">
+              <AppIcon name="zap" :size="14" />
+              <span>运行结果</span>
+            </div>
+            <button class="preview-close" @click="runVisible = false">
+              <AppIcon name="x" :size="14" />
+            </button>
+          </div>
+          <div class="preview-body">
+            <iframe v-if="runHtml" :srcdoc="runHtml" class="sandbox-frame" sandbox="allow-scripts"></iframe>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Web Preview Overlay -->
     <Transition name="fade-slide">
@@ -490,6 +530,7 @@ import TagInput from '../components/TagInput.vue'
 import MarkdownPreview from '../components/MarkdownPreview.vue'
 import EmptyState from '../components/EmptyState.vue'
 import CommandPalette from '../components/CommandPalette.vue'
+import CodeScreenshot from '../components/CodeScreenshot.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useToast } from '../composables/useToast.js'
 import { useRipple } from '../composables/useRipple.js'
@@ -510,6 +551,8 @@ const searchQuery = ref('')
 const noteSearchQuery = ref('')
 const httpTab = ref('headers')
 const splitRatio = ref(50)
+const noteDragId = ref(null)
+const noteDragFrom = ref(-1)
 let isResizing = false
 
 function startResize(e) {
@@ -555,6 +598,8 @@ watch(() => noteStore.selectedNote, (note) => {
 const previewVisible = ref(false)
 const previewContent = ref('')
 const previewLanguage = ref('text')
+const runVisible = ref(false)
+const runHtml = ref('')
 
 function openPreviewOverlay(content, language) {
   previewContent.value = content
@@ -581,6 +626,7 @@ const filterTabs = [
 
 const btnNew = ref(null)
 const editorAreaRef = ref(null)
+const screenshotRef = ref(null)
 const autoSaveStatus = ref('')
 
 useRipple(btnNew)
@@ -689,8 +735,29 @@ function formatTime(ts) {
   return new Date(ts).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
+function handleNoteDrop(toIndex) {
+  const fromIndex = noteDragFrom.value
+  if (fromIndex === toIndex || fromIndex < 0) return
+  const items = [...noteStore.notes]
+  const [moved] = items.splice(fromIndex, 1)
+  items.splice(toIndex, 0, moved)
+  noteStore.notes = items
+  noteDragId.value = null
+  noteDragFrom.value = -1
+}
+
 function openCommandPalette() {
   window.dispatchEvent(new CustomEvent('app:command-palette'))
+}
+
+function openScreenshot() {
+  if (selectedSnippet.value) {
+    screenshotRef.value?.open({
+      title: selectedSnippet.value.title,
+      code: selectedSnippet.value.content,
+      isDark: isDark.value
+    })
+  }
 }
 
 watch(selectedSnippet, async (snippet) => {
@@ -869,6 +936,30 @@ function handlePreview() {
       api.openPreview(selectedSnippet.value.content, selectedSnippet.value.language)
     }
   }
+}
+
+function runCode() {
+  if (!selectedSnippet.value) return
+  const lang = selectedSnippet.value.language
+  const code = selectedSnippet.value.content
+  let html = ''
+  if (lang === 'html') {
+    html = code
+  } else if (lang === 'css') {
+    html = `<style>${code}</style><div style="padding:20px;font-family:sans-serif;color:#333"><h1>CSS 运行结果</h1><p>上方样式已应用到当前页面</p><button class="demo-btn">演示按钮</button><input class="demo-input" placeholder="演示输入框" /></div>`
+  } else if (lang === 'javascript') {
+    html = `<!DOCTYPE html><html><head><style>body{font-family:JetBrains Mono,monospace;padding:16px;background:#1e1e1e;color:#d4d4d4;font-size:13px} .log{color:#9cdcfe;margin:2px 0} .error{color:#f44747} .warn{color:#ffcc00}</style></head><body><div id="out"></div><script>
+const out=document.getElementById('out');
+const orig={l:console.log,e:console.error,w:console.warn};
+function write(t,cls){const d=document.createElement('div');d.className=cls;d.textContent=t;out.appendChild(d)}
+console.log=function(...a){write(a.join(' '),'log');orig.l(...a)};
+console.error=function(...a){write(a.join(' '),'error');orig.e(...a)};
+console.warn=function(...a){write(a.join(' '),'warn');orig.w(...a)};
+try{${code}}catch(err){console.error(err.toString())}
+<\/script></body></html>`
+  }
+  runHtml.value = html
+  runVisible.value = true
 }
 
 function handleManagerKeydown(e) {
@@ -1839,6 +1930,13 @@ onMounted(() => {
   flex: 1;
   overflow: auto;
   padding: 16px;
+}
+.sandbox-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: #fff;
 }
 
 /* ── HTTP Client ── */

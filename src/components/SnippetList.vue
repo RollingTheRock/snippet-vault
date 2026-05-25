@@ -2,12 +2,17 @@
   <div class="snippet-list">
     <TransitionGroup name="list" tag="div" class="list-container">
       <div
-        v-for="(snippet, index) in snippets"
+        v-for="(snippet, index) in localSnippets"
         :key="snippet.id"
         class="snippet-item"
-        :class="{ active: selectedId === snippet.id }"
+        :class="{ active: selectedId === snippet.id, dragging: dragId === snippet.id }"
         :style="{ transitionDelay: `${Math.min(index * 20, 250)}ms` }"
+        draggable="true"
         @click="$emit('select', snippet.id)"
+        @dragstart="handleDragStart($event, snippet.id, index)"
+        @dragover.prevent="handleDragOver($event, index)"
+        @drop="handleDrop($event, index)"
+        @dragend="handleDragEnd"
       >
         <div class="snippet-indicator" :style="{ background: getLangColor(snippet.language) }" />
         <div class="snippet-body">
@@ -47,8 +52,43 @@
 <script setup>
 import AppIcon from './AppIcon.vue'
 
-defineProps({ snippets: Array, selectedId: Number })
-defineEmits(['select'])
+import { ref, watch } from 'vue'
+
+const props = defineProps({ snippets: Array, selectedId: Number })
+const emit = defineEmits(['select', 'reorder'])
+
+const localSnippets = ref([...props.snippets])
+const dragId = ref(null)
+const dragFromIndex = ref(-1)
+
+watch(() => props.snippets, (val) => { localSnippets.value = [...val] }, { deep: true })
+
+function handleDragStart(e, id, index) {
+  dragId.value = id
+  dragFromIndex.value = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(id))
+}
+
+function handleDragOver(e, index) {
+  e.dataTransfer.dropEffect = 'move'
+}
+
+function handleDrop(e, toIndex) {
+  e.preventDefault()
+  const fromIndex = dragFromIndex.value
+  if (fromIndex === toIndex || fromIndex < 0) return
+  const items = [...localSnippets.value]
+  const [moved] = items.splice(fromIndex, 1)
+  items.splice(toIndex, 0, moved)
+  localSnippets.value = items
+  emit('reorder', items.map(s => s.id))
+}
+
+function handleDragEnd() {
+  dragId.value = null
+  dragFromIndex.value = -1
+}
 
 function formatTime(ts) {
   const diff = Date.now() - ts
@@ -106,6 +146,10 @@ function getLangColor(lang) {
 }
 .snippet-item.active {
   background: var(--selection-bg);
+}
+.snippet-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
 }
 .snippet-indicator {
   width: 2.5px;

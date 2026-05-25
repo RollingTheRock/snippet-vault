@@ -18,6 +18,11 @@ async function bootstrap() {
   // Mark root element for conditional CSS
   const appEl = document.getElementById('app')
   if (appEl) appEl.setAttribute('data-electron', String(isElectron))
+
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator && !isElectron) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  }
 }
 
 bootstrap()
