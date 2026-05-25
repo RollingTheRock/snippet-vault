@@ -32,8 +32,9 @@
 
       <!-- Sidebar -->
       <div class="sidebar">
-        <div v-if="activeModule === 'snippets'" class="module-panel">
-        <div class="search-wrapper">
+        <Transition name="sidebar-slide" mode="out-in">
+          <div v-if="activeModule === 'snippets'" key="sb-snippets" class="module-panel">
+          <div class="search-wrapper">
           <AppIcon name="search" :size="14" class="search-icon" />
           <input
             v-model="searchQuery"
@@ -88,7 +89,7 @@
           @select="snippetStore.selectedId = $event"
         />
         </div>
-        <div v-else-if="activeModule === 'notes'" class="module-panel">
+        <div v-else-if="activeModule === 'notes'" key="sb-notes" class="module-panel">
           <div class="search-wrapper">
             <AppIcon name="search" :size="14" class="search-icon" />
             <input
@@ -149,8 +150,8 @@
               </div>
             </div>
           </div>
-        </div>
-        <div v-else-if="activeModule === 'http'" class="module-panel http-env-panel">
+          </div>
+          <div v-else-if="activeModule === 'http'" key="sb-http" class="module-panel http-env-panel">
           <div class="panel-header">
             <AppIcon name="settings" :size="12" />
             <span>环境变量</span>
@@ -171,7 +172,8 @@
           <div class="env-hint">
             使用 <code v-pre>{{name}}</code> 在 URL / Header / Body 中引用
           </div>
-        </div>
+          </div>
+        </Transition>
       </div>
 
       <!-- Editor -->
@@ -239,12 +241,15 @@
               :isDark="isDark"
               placeholder="输入代码..."
               :class="{ 'md-full': editForm.language === 'markdown' && mdMode === 'code', 'md-half': editForm.language === 'markdown' && mdMode === 'split' }"
+              :style="editForm.language === 'markdown' && mdMode === 'split' ? { flexBasis: splitRatio + '%' } : {}"
             />
+            <div v-if="editForm.language === 'markdown' && mdMode === 'split'" class="split-resizer" @mousedown="startResize" />
             <MarkdownPreview
               v-if="editForm.language === 'markdown' && mdMode !== 'code'"
               :content="editForm.content"
               :isDark="isDark"
               :class="{ 'md-full': mdMode === 'preview', 'md-half': mdMode === 'split' }"
+              :style="editForm.language === 'markdown' && mdMode === 'split' ? { flexBasis: (100 - splitRatio) + '%' } : {}"
             />
           </div>
 
@@ -291,12 +296,15 @@
               :isDark="isDark"
               placeholder="输入 Markdown 内容..."
               :class="{ 'md-full': noteMdMode === 'code', 'md-half': noteMdMode === 'split' }"
+              :style="noteMdMode === 'split' ? { flexBasis: splitRatio + '%' } : {}"
             />
+            <div v-if="noteMdMode === 'split'" class="split-resizer" @mousedown="startResize" />
             <MarkdownPreview
               v-if="noteMdMode !== 'code'"
               :content="noteEditForm.content"
               :isDark="isDark"
               :class="{ 'md-full': noteMdMode === 'preview', 'md-half': noteMdMode === 'split' }"
+              :style="noteMdMode === 'split' ? { flexBasis: (100 - splitRatio) + '%' } : {}"
             />
           </div>
           <div class="editor-actions">
@@ -501,6 +509,31 @@ const { isDark, toggle: toggleTheme } = useTheme()
 const searchQuery = ref('')
 const noteSearchQuery = ref('')
 const httpTab = ref('headers')
+const splitRatio = ref(50)
+let isResizing = false
+
+function startResize(e) {
+  isResizing = true
+  const container = e.target.parentElement
+  const startX = e.clientX
+  const startRatio = splitRatio.value
+
+  function onMouseMove(ev) {
+    if (!isResizing) return
+    const delta = ev.clientX - startX
+    const newRatio = startRatio + (delta / container.offsetWidth) * 100
+    splitRatio.value = Math.max(20, Math.min(80, newRatio))
+  }
+
+  function onMouseUp() {
+    isResizing = false
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
 const editForm = reactive({ title: '', content: '', language: 'javascript' })
 const currentTags = ref([])
 const mdMode = ref('split')
@@ -857,12 +890,18 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: linear-gradient(180deg, #f0f0f2 0%, #e8e8ec 100%);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(0,0,0,0.025) 1px, transparent 0),
+    linear-gradient(180deg, #f0f0f2 0%, #e8e8ec 100%);
+  background-size: 20px 20px, 100% 100%;
   overflow: hidden;
 }
 
 [data-theme="dark"] .main-manager {
-  background: linear-gradient(180deg, #1c1c1e 0%, #161618 100%);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.02) 1px, transparent 0),
+    linear-gradient(180deg, #1c1c1e 0%, #161618 100%);
+  background-size: 20px 20px, 100% 100%;
 }
 
 /* ── Toolbar ── */
@@ -1387,7 +1426,7 @@ onMounted(() => {
 }
 .editor-body.split {
   flex-direction: row;
-  gap: 12px;
+  gap: 0;
 }
 .editor-body :deep(.code-editor-wrapper) {
   flex: 1;
@@ -1402,6 +1441,31 @@ onMounted(() => {
 .editor-body :deep(.markdown-preview) {
   flex: 1;
   min-height: 0;
+}
+.split-resizer {
+  width: 8px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.split-resizer:hover {
+  background: var(--border-color);
+}
+.split-resizer::before {
+  content: '';
+  width: 2px;
+  height: 24px;
+  border-radius: 1px;
+  background: var(--border-subtle);
+  transition: background 0.15s ease;
+}
+.split-resizer:hover::before {
+  background: var(--text-tertiary);
 }
 
 .editor-actions {
@@ -2079,7 +2143,23 @@ onMounted(() => {
   font-size: 10px;
 }
 
-/* ── Transitions ── */
+/* ── Sidebar Slide Transition ── */
+.sidebar-slide-enter-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sidebar-slide-leave-active {
+  transition: all 0.15s ease;
+}
+.sidebar-slide-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.sidebar-slide-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
+/* ── Fade Slide Transition ── */
 .fade-slide-enter-active {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

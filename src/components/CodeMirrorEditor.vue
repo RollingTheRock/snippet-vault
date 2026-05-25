@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { EditorView, keymap, lineNumbers, highlightActiveLineGutter } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view'
 import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { bracketMatching, syntaxHighlighting, indentOnInput } from '@codemirror/language'
@@ -206,6 +206,7 @@ async function initEditor() {
   const extensions = [
     lineNumbers(),
     highlightActiveLineGutter(),
+    highlightActiveLine(),
     history(),
     bracketMatching(),
     closeBrackets(),
