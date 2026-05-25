@@ -39,6 +39,8 @@
     <div class="content">
       <!-- Sidebar -->
       <div class="sidebar">
+        <ActivityBar v-model="activeModule" />
+        <div v-if="activeModule === 'snippets'" class="module-panel">
         <div class="search-wrapper">
           <AppIcon name="search" :size="14" class="search-icon" />
           <input
@@ -93,6 +95,21 @@
           :selectedId="snippetStore.selectedId"
           @select="snippetStore.selectedId = $event"
         />
+        </div>
+        <div v-else-if="activeModule === 'notes'" class="module-panel">
+          <div class="module-placeholder">
+            <div class="placeholder-icon"><AppIcon name="file-text" :size="32" /></div>
+            <h4>笔记模块</h4>
+            <p>Markdown 笔记管理开发中</p>
+          </div>
+        </div>
+        <div v-else-if="activeModule === 'http'" class="module-panel">
+          <div class="module-placeholder">
+            <div class="placeholder-icon"><AppIcon name="zap" :size="32" /></div>
+            <h4>API 测试模块</h4>
+            <p>HTTP Client 开发中</p>
+          </div>
+        </div>
       </div>
 
       <!-- Editor -->
@@ -258,9 +275,11 @@ import { useRipple } from '../composables/useRipple.js'
 import { useGlowCursor } from '../composables/useGlowCursor.js'
 import { useMagnetic } from '../composables/useMagnetic.js'
 import { api } from '../api/index.js'
+import ActivityBar from '../components/ActivityBar.vue'
 
 const snippetStore = useSnippetStore()
 const tagStore = useTagStore()
+const activeModule = ref('snippets') // 'snippets' | 'notes' | 'http'
 const { success, error: showError } = useToast()
 const { isDark, toggle: toggleTheme } = useTheme()
 
@@ -1125,6 +1144,54 @@ onMounted(() => {
 }
 [data-theme="dark"] .empty-shortcut kbd {
   background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+.module-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.module-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-tertiary);
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.placeholder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #f5f5f7 0%, #ececee 100%);
+  box-shadow: var(--inset-sunken);
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+[data-theme="dark"] .placeholder-icon {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+.module-placeholder h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.module-placeholder p {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
 }
 
 /* ── Preview Overlay ── */
