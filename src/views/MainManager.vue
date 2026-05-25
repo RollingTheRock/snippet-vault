@@ -150,6 +150,28 @@
             </div>
           </div>
         </div>
+        <div v-else-if="activeModule === 'http'" class="module-panel http-env-panel">
+          <div class="panel-header">
+            <AppIcon name="settings" :size="12" />
+            <span>环境变量</span>
+          </div>
+          <div class="env-list">
+            <div v-for="(env, i) in httpStore.envVars" :key="i" class="env-row">
+              <input v-model="env.name" class="env-input env-name" placeholder="变量名" />
+              <input v-model="env.value" class="env-input env-value" placeholder="值" />
+              <button class="env-remove" @click="httpStore.removeEnvVar(i)">
+                <AppIcon name="x" :size="12" />
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-ghost add-env-btn" @click="httpStore.addEnvVar()">
+            <AppIcon name="plus" :size="12" />
+            <span>添加变量</span>
+          </button>
+          <div class="env-hint">
+            使用 <code v-pre>{{name}}</code> 在 URL / Header / Body 中引用
+          </div>
+        </div>
       </div>
 
       <!-- Editor -->
@@ -340,6 +362,102 @@
           <h3>选择一个笔记或创建新笔记</h3>
           <p>使用左侧浏览已有笔记，或点击上方「新建」开始</p>
         </div>
+
+        <!-- HTTP Client -->
+        <div class="http-client" v-else-if="activeModule === 'http'" key="http-client">
+          <div class="http-request-bar">
+            <select v-model="httpStore.method" class="http-method">
+              <option v-for="m in httpStore.METHODS" :key="m">{{ m }}</option>
+            </select>
+            <input
+              v-model="httpStore.url"
+              class="http-url"
+              placeholder="输入请求 URL，如 {{baseUrl}}/posts"
+            />
+            <button
+              class="btn btn-primary http-send"
+              @click="httpStore.sendRequest(); httpTab = 'response'"
+              :disabled="httpStore.loading"
+            >
+              <AppIcon :name="httpStore.loading ? 'loader' : 'zap'" :size="13" />
+              <span>{{ httpStore.loading ? '发送中...' : '发送' }}</span>
+            </button>
+          </div>
+
+          <div class="http-tabs">
+            <button
+              class="http-tab"
+              :class="{ active: httpTab === 'headers' }"
+              @click="httpTab = 'headers'"
+            >请求头</button>
+            <button
+              class="http-tab"
+              :class="{ active: httpTab === 'body' }"
+              @click="httpTab = 'body'"
+            >请求体</button>
+            <button
+              class="http-tab"
+              :class="{ active: httpTab === 'response' }"
+              @click="httpTab = 'response'"
+            >响应</button>
+          </div>
+
+          <div class="http-panel" v-show="httpTab === 'headers'">
+            <div class="http-header-row" v-for="(h, i) in httpStore.headers" :key="i">
+              <input type="checkbox" v-model="h.enabled" class="http-h-check" />
+              <input v-model="h.key" class="http-h-key" placeholder="Header 名称" />
+              <input v-model="h.value" class="http-h-value" placeholder="Header 值" />
+              <button class="env-remove" @click="httpStore.removeHeader(i)">
+                <AppIcon name="x" :size="12" />
+              </button>
+            </div>
+            <button class="btn btn-ghost add-row-btn" @click="httpStore.addHeader()">
+              <AppIcon name="plus" :size="12" />
+              <span>添加 Header</span>
+            </button>
+          </div>
+
+          <div class="http-panel http-body-panel" v-show="httpTab === 'body'">
+            <CodeEditor
+              v-model="httpStore.body"
+              language="json"
+              :isDark="isDark"
+              placeholder="请求体内容 (JSON / Form / Text)..."
+            />
+          </div>
+
+          <div class="http-panel" v-show="httpTab === 'response'">
+            <div v-if="httpStore.error" class="http-error">
+              <AppIcon name="alert-circle" :size="16" />
+              <span>{{ httpStore.error }}</span>
+            </div>
+            <div v-else-if="httpStore.response" class="http-response">
+              <div class="http-res-meta">
+                <span class="http-status" :class="{ ok: httpStore.response.ok, err: !httpStore.response.ok }">
+                  {{ httpStore.response.status }} {{ httpStore.response.statusText }}
+                </span>
+                <span class="http-time">{{ httpStore.response.time }}ms</span>
+              </div>
+              <div class="http-res-headers">
+                <div v-for="(v, k) in httpStore.response.headers" :key="k" class="http-res-h">
+                  <span class="http-res-hk">{{ k }}:</span>
+                  <span class="http-res-hv">{{ v }}</span>
+                </div>
+              </div>
+              <CodeEditor
+                v-model="httpStore.response.bodyFormatted"
+                language="json"
+                :isDark="isDark"
+                :readOnly="true"
+                placeholder="响应内容..."
+              />
+            </div>
+            <div v-else class="http-empty-res">
+              <AppIcon name="zap" :size="32" />
+              <p>点击「发送」查看响应</p>
+            </div>
+          </div>
+        </div>
       </Transition>
     </div>
     <!-- Web Preview Overlay -->
@@ -368,6 +486,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useSnippetStore } from '../stores/snippets.js'
 import { useNoteStore } from '../stores/notes.js'
+import { useHttpStore } from '../stores/http.js'
 import { useTagStore } from '../stores/tags.js'
 import { useTheme } from '../composables/useTheme.js'
 import SnippetList from '../components/SnippetList.vue'
@@ -384,6 +503,7 @@ import ActivityBar from '../components/ActivityBar.vue'
 
 const snippetStore = useSnippetStore()
 const noteStore = useNoteStore()
+const httpStore = useHttpStore()
 const tagStore = useTagStore()
 const activeModule = ref('snippets') // 'snippets' | 'notes' | 'http'
 const { success, error: showError } = useToast()
@@ -391,6 +511,7 @@ const { isDark, toggle: toggleTheme } = useTheme()
 
 const searchQuery = ref('')
 const noteSearchQuery = ref('')
+const httpTab = ref('headers')
 const editForm = reactive({ title: '', content: '', language: 'javascript' })
 const currentTags = ref([])
 const mdMode = ref('split')
@@ -482,9 +603,11 @@ const languages = [
   { value: 'markdown', label: 'Markdown' }
 ]
 
-const selectedId = computed(() =>
-  activeModule.value === 'notes' ? noteStore.selectedId : snippetStore.selectedId
-)
+const selectedId = computed(() => {
+  if (activeModule.value === 'notes') return noteStore.selectedId
+  if (activeModule.value === 'http') return !!httpStore.url
+  return snippetStore.selectedId
+})
 const selectedSnippet = computed(() => snippetStore.selectedSnippet)
 const hasChanges = computed(() => {
   if (activeModule.value === 'notes') {
@@ -494,6 +617,9 @@ const hasChanges = computed(() => {
       JSON.stringify(noteCurrentTags.value.map(t => t.id).sort())
     return noteEditForm.title !== note.title ||
       noteEditForm.content !== note.content || tagsChanged
+  }
+  if (activeModule.value === 'http') {
+    return !!httpStore.url
   }
   if (!selectedSnippet.value) return false
   const tagsChanged = JSON.stringify((selectedSnippet.value.tags || []).map(t => t.id).sort()) !==
@@ -561,10 +687,23 @@ async function handleNew() {
       content: ''
     })
     success('新笔记已创建')
+  } else if (activeModule.value === 'http') {
+    httpStore.reset()
+    success('请求已重置')
   }
 }
 
 async function handleSave() {
+  if (activeModule.value === 'http') {
+    await httpStore.sendRequest()
+    httpTab.value = 'response'
+    if (httpStore.error) {
+      showError(httpStore.error)
+    } else if (httpStore.response) {
+      success(`请求完成 (${httpStore.response.status})`)
+    }
+    return
+  }
   if (!selectedId.value) return
   try {
     if (activeModule.value === 'notes') {
@@ -621,6 +760,9 @@ async function handleDelete() {
     if (activeModule.value === 'notes') {
       await noteStore.deleteNote(noteStore.selectedId)
       success('笔记已删除')
+    } else if (activeModule.value === 'http') {
+      httpStore.reset()
+      success('请求已重置')
     } else {
       await snippetStore.deleteSnippet(selectedId.value)
       success('已删除')
@@ -1507,6 +1649,308 @@ onMounted(() => {
   flex: 1;
   overflow: auto;
   padding: 16px;
+}
+
+/* ── HTTP Client ── */
+.http-client {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafc 100%);
+  padding: 18px 24px;
+  overflow: hidden;
+}
+[data-theme="dark"] .http-client {
+  background: linear-gradient(180deg, #2c2c2e 0%, #1c1c1e 100%);
+}
+
+.http-request-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.http-method {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+[data-theme="dark"] .http-method {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.http-url {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+[data-theme="dark"] .http-url {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.http-url:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2.5px var(--accent-blue-bg);
+}
+.http-send {
+  white-space: nowrap;
+}
+
+.http-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  width: fit-content;
+}
+.http-tab {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.http-tab:hover {
+  color: var(--text-primary);
+}
+.http-tab.active {
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  color: var(--text-primary);
+  box-shadow: var(--inset-sunken), 0 0.5px 1px rgba(0,0,0,0.03);
+}
+[data-theme="dark"] .http-tab.active {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+.http-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.http-body-panel .code-editor-wrapper {
+  flex: 1;
+}
+
+.http-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.http-h-check {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+}
+.http-h-key,
+.http-h-value {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+}
+[data-theme="dark"] .http-h-key,
+[data-theme="dark"] .http-h-value {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.http-h-key {
+  width: 160px;
+}
+.http-h-value {
+  flex: 1;
+}
+.add-row-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.http-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255, 59, 48, 0.08);
+  border: 0.5px solid rgba(255, 59, 48, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--accent-red);
+  font-size: 13px;
+}
+
+.http-response {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.http-res-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 12px;
+}
+.http-status {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.http-status.ok {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--accent-green);
+}
+.http-status.err {
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--accent-red);
+}
+.http-time {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.http-res-headers {
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.http-res-h {
+  display: flex;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.8;
+  font-family: 'SF Mono', monospace;
+}
+.http-res-hk {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.http-res-hv {
+  color: var(--text-secondary);
+}
+
+.http-empty-res {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-tertiary);
+}
+.http-empty-res p {
+  font-size: 13px;
+}
+
+/* ── HTTP Env Panel (Sidebar) ── */
+.http-env-panel {
+  padding: 12px;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+.env-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.env-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.env-input {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 11.5px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  width: 0;
+}
+[data-theme="dark"] .env-input {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.env-name {
+  flex: 1;
+}
+.env-value {
+  flex: 1.5;
+}
+.env-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.env-remove:hover {
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--accent-red);
+}
+.add-env-btn {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.env-hint {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+.env-hint code {
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
 }
 
 /* ── Transitions ── */
