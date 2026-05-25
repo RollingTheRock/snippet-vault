@@ -77,6 +77,17 @@ export const api = {
   updateTag: (id, data) => isElectron ? window.electronAPI.updateTag(id, data) : webDb.updateTag(id, data),
   deleteTag: (id) => isElectron ? window.electronAPI.deleteTag(id) : webDb.removeTag(id),
 
+  // ── Notes ──
+  getNotes: () => isElectron ? window.electronAPI.getNotes() : webDb.getAllNotes(),
+  getNoteById: (id) => isElectron ? window.electronAPI.getNoteById(id) : webDb.getNoteById(id),
+  searchNotes: (query) => isElectron ? window.electronAPI.searchNotes(query) : webDb.searchNotes(query),
+  createNote: (data) => isElectron ? window.electronAPI.createNote(data) : webDb.createNote(data),
+  updateNote: (id, data) => isElectron ? window.electronAPI.updateNote(id, data) : webDb.updateNote(id, data),
+  deleteNote: (id) => isElectron ? window.electronAPI.deleteNote(id) : webDb.removeNote(id),
+  getNoteTags: (id) => isElectron ? window.electronAPI.getNoteTags(id) : webDb.getNoteTags(id),
+  setNoteTags: (id, tagIds) => isElectron ? window.electronAPI.setNoteTags(id, tagIds) : webDb.setNoteTags(id, tagIds),
+  getNotesByTag: (tagId) => isElectron ? window.electronAPI.getNotesByTag(tagId) : webDb.getNotesByTag(tagId),
+
   // ── Platform-specific ──
   copySnippet: (content, snippetId) =>
     isElectron ? window.electronAPI.copySnippet(content, snippetId) : webCopy(content, snippetId),

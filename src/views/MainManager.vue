@@ -97,24 +97,64 @@
         />
         </div>
         <div v-else-if="activeModule === 'notes'" class="module-panel">
-          <div class="module-placeholder">
-            <div class="placeholder-icon"><AppIcon name="file-text" :size="32" /></div>
-            <h4>笔记模块</h4>
-            <p>Markdown 笔记管理开发中</p>
+          <div class="search-wrapper">
+            <AppIcon name="search" :size="14" class="search-icon" />
+            <input
+              v-model="noteSearchQuery"
+              @input="handleNoteSearch"
+              class="search-input"
+              placeholder="搜索笔记..."
+            />
           </div>
-        </div>
-        <div v-else-if="activeModule === 'http'" class="module-panel">
-          <div class="module-placeholder">
-            <div class="placeholder-icon"><AppIcon name="zap" :size="32" /></div>
-            <h4>API 测试模块</h4>
-            <p>HTTP Client 开发中</p>
+          <div class="tag-cloud" v-if="tagStore.tags.length > 0">
+            <div class="tag-cloud-label">
+              <AppIcon name="tag" :size="11" />
+              <span>标签筛选</span>
+            </div>
+            <div class="tag-cloud-items">
+              <span
+                v-for="tag in tagStore.tags"
+                :key="tag.id"
+                class="tag-cloud-item"
+                :class="{ active: noteStore.filterTagId === tag.id }"
+                :style="{
+                  background: noteStore.filterTagId === tag.id ? tag.color + '16' : tag.color + '0a',
+                  color: tag.color,
+                  borderColor: noteStore.filterTagId === tag.id ? tag.color + '30' : 'transparent'
+                }"
+                @click="toggleNoteTagFilter(tag.id)"
+              >
+                <span class="tag-dot" :style="{ background: tag.color }" />
+                {{ tag.name }}
+              </span>
+            </div>
+          </div>
+          <div class="list-header">
+            <span class="list-count">{{ noteStore.notes.length }} 个笔记</span>
+          </div>
+          <div class="note-list">
+            <div
+              v-for="note in noteStore.notes"
+              :key="note.id"
+              class="note-item"
+              :class="{ active: noteStore.selectedId === note.id }"
+              @click="noteStore.selectedId = note.id"
+            >
+              <div class="note-title">{{ note.title || '未命名笔记' }}</div>
+              <div class="note-preview">{{ note.content.substring(0, 60).replace(/\n/g, ' ') }}...</div>
+              <div class="note-meta">
+                <span v-for="tag in note.tags" :key="tag.id" class="note-tag" :style="{ color: tag.color }">
+                  {{ tag.name }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Editor -->
       <Transition name="fade-slide" mode="out-in">
-        <div class="editor-area" v-if="selectedSnippet" key="editor" ref="editorAreaRef">
+        <div class="editor-area" v-if="activeModule === 'snippets' && selectedSnippet" key="snippet-editor" ref="editorAreaRef">
           <!-- Glow cursor -->
           <div class="glow-cursor" :style="{
             left: `${editorGlow.x.value}px`,
@@ -198,7 +238,7 @@
           </div>
         </div>
 
-        <div class="empty-state" v-else key="empty" ref="emptyStateRef">
+        <div class="empty-state" v-else-if="activeModule === 'snippets'" key="snippet-empty" ref="emptyStateRef">
           <!-- Glow cursor -->
           <div class="glow-cursor" :style="{
             left: `${emptyGlow.x.value}px`,
@@ -236,6 +276,70 @@
             <span>快速启动</span>
           </div>
         </div>
+
+        <!-- Notes Editor -->
+        <div class="editor-area" v-else-if="activeModule === 'notes' && noteStore.selectedNote" key="note-editor">
+          <input
+            v-model="noteEditForm.title"
+            class="title-input"
+            placeholder="笔记标题"
+          />
+          <div class="editor-toolbar">
+            <TagInput v-model="noteCurrentTags" />
+            <div class="md-mode-switcher">
+              <button class="mode-btn" :class="{ active: noteMdMode === 'code' }" @click="noteMdMode = 'code'">
+                <AppIcon name="code" :size="12" /> 源码
+              </button>
+              <button class="mode-btn" :class="{ active: noteMdMode === 'split' }" @click="noteMdMode = 'split'">
+                <AppIcon name="layout" :size="12" /> 分屏
+              </button>
+              <button class="mode-btn" :class="{ active: noteMdMode === 'preview' }" @click="noteMdMode = 'preview'">
+                <AppIcon name="eye" :size="12" /> 预览
+              </button>
+            </div>
+          </div>
+          <div class="editor-body" :class="{ split: noteMdMode === 'split' }">
+            <CodeEditor
+              v-show="noteMdMode !== 'preview'"
+              v-model="noteEditForm.content"
+              language="markdown"
+              :isDark="isDark"
+              placeholder="输入 Markdown 内容..."
+              :class="{ 'md-full': noteMdMode === 'code', 'md-half': noteMdMode === 'split' }"
+            />
+            <MarkdownPreview
+              v-if="noteMdMode !== 'code'"
+              :content="noteEditForm.content"
+              :isDark="isDark"
+              :class="{ 'md-full': noteMdMode === 'preview', 'md-half': noteMdMode === 'split' }"
+            />
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="handleNoteSave">
+              <AppIcon name="save" :size="13" /><span>保存</span>
+            </button>
+            <button class="btn btn-secondary btn-danger" @click="handleNoteDelete">
+              <AppIcon name="trash" :size="13" /><span>删除</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="empty-state" v-else-if="activeModule === 'notes'" key="note-empty">
+          <div class="empty-art">
+            <div class="art-window">
+              <div class="art-window-header">
+                <span class="art-dot red" /><span class="art-dot yellow" /><span class="art-dot green" />
+              </div>
+              <div class="art-window-body">
+                <div class="art-line" /><div class="art-line short" />
+                <div class="art-bracket" />
+              </div>
+            </div>
+            <div class="art-floating art-float-1"><AppIcon name="file-text" :size="16" /></div>
+          </div>
+          <h3>选择一个笔记或创建新笔记</h3>
+          <p>使用左侧浏览已有笔记，或点击上方「新建」开始</p>
+        </div>
       </Transition>
     </div>
     <!-- Web Preview Overlay -->
@@ -263,6 +367,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useSnippetStore } from '../stores/snippets.js'
+import { useNoteStore } from '../stores/notes.js'
 import { useTagStore } from '../stores/tags.js'
 import { useTheme } from '../composables/useTheme.js'
 import SnippetList from '../components/SnippetList.vue'
@@ -278,15 +383,30 @@ import { api } from '../api/index.js'
 import ActivityBar from '../components/ActivityBar.vue'
 
 const snippetStore = useSnippetStore()
+const noteStore = useNoteStore()
 const tagStore = useTagStore()
 const activeModule = ref('snippets') // 'snippets' | 'notes' | 'http'
 const { success, error: showError } = useToast()
 const { isDark, toggle: toggleTheme } = useTheme()
 
 const searchQuery = ref('')
+const noteSearchQuery = ref('')
 const editForm = reactive({ title: '', content: '', language: 'javascript' })
 const currentTags = ref([])
-const mdMode = ref('split') // 'code' | 'split' | 'preview'
+const mdMode = ref('split')
+
+// Notes
+const noteEditForm = reactive({ title: '', content: '' })
+const noteCurrentTags = ref([])
+const noteMdMode = ref('split')
+
+watch(() => noteStore.selectedNote, (note) => {
+  if (note) {
+    noteEditForm.title = note.title
+    noteEditForm.content = note.content
+    noteCurrentTags.value = note.tags || []
+  }
+}, { immediate: true })
 
 // Web preview overlay
 const previewVisible = ref(false)
@@ -362,9 +482,19 @@ const languages = [
   { value: 'markdown', label: 'Markdown' }
 ]
 
-const selectedId = computed(() => snippetStore.selectedId)
+const selectedId = computed(() =>
+  activeModule.value === 'notes' ? noteStore.selectedId : snippetStore.selectedId
+)
 const selectedSnippet = computed(() => snippetStore.selectedSnippet)
 const hasChanges = computed(() => {
+  if (activeModule.value === 'notes') {
+    const note = noteStore.selectedNote
+    if (!note) return false
+    const tagsChanged = JSON.stringify((note.tags || []).map(t => t.id).sort()) !==
+      JSON.stringify(noteCurrentTags.value.map(t => t.id).sort())
+    return noteEditForm.title !== note.title ||
+      noteEditForm.content !== note.content || tagsChanged
+  }
   if (!selectedSnippet.value) return false
   const tagsChanged = JSON.stringify((selectedSnippet.value.tags || []).map(t => t.id).sort()) !==
     JSON.stringify(currentTags.value.map(t => t.id).sort())
@@ -391,6 +521,18 @@ async function handleSearch() {
   await snippetStore.searchSnippets(searchQuery.value)
 }
 
+async function handleNoteSearch() {
+  await noteStore.searchNotes(noteSearchQuery.value)
+}
+
+async function toggleNoteTagFilter(tagId) {
+  if (noteStore.filterTagId === tagId) {
+    await noteStore.loadNotes()
+  } else {
+    await noteStore.loadByTag(tagId)
+  }
+}
+
 async function setFilter(mode) {
   if (mode === 'all') await snippetStore.loadSnippets()
   else if (mode === 'recent') await snippetStore.loadRecent()
@@ -406,35 +548,83 @@ async function toggleTagFilter(tagId) {
 }
 
 async function handleNew() {
-  await snippetStore.createSnippet({
-    title: '未命名片段',
-    content: '',
-    language: 'javascript'
-  })
-  success('新片段已创建')
+  if (activeModule.value === 'snippets') {
+    await snippetStore.createSnippet({
+      title: '未命名片段',
+      content: '',
+      language: 'javascript'
+    })
+    success('新片段已创建')
+  } else if (activeModule.value === 'notes') {
+    await noteStore.createNote({
+      title: '未命名笔记',
+      content: ''
+    })
+    success('新笔记已创建')
+  }
 }
 
 async function handleSave() {
   if (!selectedId.value) return
   try {
-    await snippetStore.updateSnippet(selectedId.value, {
-      title: editForm.title,
-      content: editForm.content,
-      language: editForm.language
-    })
-    await api.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
-    await snippetStore.loadSnippets()
-    success('保存成功')
+    if (activeModule.value === 'notes') {
+      await noteStore.updateNote(noteStore.selectedId, {
+        title: noteEditForm.title,
+        content: noteEditForm.content
+      })
+      await api.setNoteTags(noteStore.selectedId, noteCurrentTags.value.map(t => t.id))
+      await noteStore.loadNotes()
+      success('笔记保存成功')
+    } else {
+      await snippetStore.updateSnippet(selectedId.value, {
+        title: editForm.title,
+        content: editForm.content,
+        language: editForm.language
+      })
+      await api.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
+      await snippetStore.loadSnippets()
+      success('保存成功')
+    }
   } catch (e) {
     showError('保存失败')
+  }
+}
+
+async function handleNoteSave() {
+  if (!noteStore.selectedId) return
+  try {
+    await noteStore.updateNote(noteStore.selectedId, {
+      title: noteEditForm.title,
+      content: noteEditForm.content
+    })
+    await api.setNoteTags(noteStore.selectedId, noteCurrentTags.value.map(t => t.id))
+    await noteStore.loadNotes()
+    success('笔记保存成功')
+  } catch (e) {
+    showError('保存失败')
+  }
+}
+
+async function handleNoteDelete() {
+  if (!noteStore.selectedId) return
+  try {
+    await noteStore.deleteNote(noteStore.selectedId)
+    success('笔记已删除')
+  } catch (e) {
+    showError('删除失败')
   }
 }
 
 async function handleDelete() {
   if (!selectedId.value) return
   try {
-    await snippetStore.deleteSnippet(selectedId.value)
-    success('已删除')
+    if (activeModule.value === 'notes') {
+      await noteStore.deleteNote(noteStore.selectedId)
+      success('笔记已删除')
+    } else {
+      await snippetStore.deleteSnippet(selectedId.value)
+      success('已删除')
+    }
   } catch (e) {
     showError('删除失败')
   }
@@ -485,6 +675,7 @@ function handleManagerKeydown(e) {
 
 onMounted(() => {
   snippetStore.loadSnippets()
+  noteStore.loadNotes()
   tagStore.loadTags()
 })
 </script>
@@ -1192,6 +1383,68 @@ onMounted(() => {
 .module-placeholder p {
   font-size: 12.5px;
   color: var(--text-tertiary);
+}
+
+.note-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.note-item {
+  padding: 10px 14px;
+  margin: 0 8px 4px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  border: 0.5px solid transparent;
+}
+
+.note-item:hover {
+  background: var(--bg-secondary);
+}
+
+.note-item.active {
+  background: var(--accent-blue-bg);
+  border-color: rgba(0, 113, 227, 0.12);
+}
+
+.note-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-preview {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.note-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.note-tag {
+  font-size: 10px;
+  font-weight: 500;
+  background: rgba(0,0,0,0.04);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .note-tag {
+  background: rgba(255,255,255,0.06);
 }
 
 /* ── Preview Overlay ── */

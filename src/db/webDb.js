@@ -1,5 +1,5 @@
 const DB_NAME = 'snippet-vault'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -27,6 +27,18 @@ function openDb() {
         const stStore = db.createObjectStore('snippet_tags', { keyPath: 'id' })
         stStore.createIndex('snippet_id', 'snippet_id', { unique: false })
         stStore.createIndex('tag_id', 'tag_id', { unique: false })
+      }
+
+      if (!db.objectStoreNames.contains('notes')) {
+        const notesStore = db.createObjectStore('notes', { keyPath: 'id', autoIncrement: true })
+        notesStore.createIndex('title', 'title', { unique: false })
+        notesStore.createIndex('updated_at', 'updated_at', { unique: false })
+      }
+
+      if (!db.objectStoreNames.contains('note_tags')) {
+        const ntStore = db.createObjectStore('note_tags', { keyPath: 'id' })
+        ntStore.createIndex('note_id', 'note_id', { unique: false })
+        ntStore.createIndex('tag_id', 'tag_id', { unique: false })
       }
     }
   })
@@ -257,9 +269,124 @@ async function getTagSnippets(tagId) {
   return getByTag(tagId)
 }
 
+// ── Notes ──
+async function getAllNotes() {
+  const t = await tx('notes')
+  const all = await promisify(t.objectStore('notes').getAll())
+  all.sort((a, b) => b.updated_at - a.updated_at)
+  return fillNoteTags(all)
+}
+
+async function fillNoteTags(notes) {
+  for (const n of notes) {
+    n.tags = await getNoteTags(n.id)
+  }
+  return notes
+}
+
+async function getNoteTags(noteId) {
+  const t = await tx(['note_tags', 'tags'])
+  const ntStore = t.objectStore('note_tags')
+  const tagStore = t.objectStore('tags')
+  const idx = ntStore.index('note_id')
+  const links = await promisify(idx.getAll(noteId))
+  const tags = []
+  for (const link of links) {
+    const tag = await promisify(tagStore.get(link.tag_id))
+    if (tag) tags.push(tag)
+  }
+  return tags
+}
+
+async function setNoteTags(noteId, tagIds) {
+  const t = await tx(['note_tags'], 'readwrite')
+  const ntStore = t.objectStore('note_tags')
+  const idx = ntStore.index('note_id')
+  const links = await promisify(idx.getAll(noteId))
+  for (const link of links) {
+    await promisify(ntStore.delete(link.id))
+  }
+  for (const tagId of tagIds) {
+    await promisify(ntStore.add({ id: `${noteId}-${tagId}`, note_id: noteId, tag_id: tagId }))
+  }
+}
+
+async function getNoteById(id) {
+  const t = await tx('notes')
+  const n = await promisify(t.objectStore('notes').get(id))
+  if (n) n.tags = await getNoteTags(id)
+  return n
+}
+
+async function searchNotes(query) {
+  const term = query.toLowerCase()
+  const t = await tx(['notes', 'tags', 'note_tags'])
+  const all = await promisify(t.objectStore('notes').getAll())
+  const tagMap = new Map()
+  const ntLinks = await promisify(t.objectStore('note_tags').getAll())
+  for (const link of ntLinks) {
+    if (!tagMap.has(link.note_id)) tagMap.set(link.note_id, [])
+    const tag = await promisify(t.objectStore('tags').get(link.tag_id))
+    if (tag) tagMap.get(link.note_id).push(tag.name.toLowerCase())
+  }
+  const matched = all.filter(n => {
+    const tagNames = tagMap.get(n.id) || []
+    return n.title.toLowerCase().includes(term) ||
+           n.content.toLowerCase().includes(term) ||
+           tagNames.some(tn => tn.includes(term))
+  })
+  matched.sort((a, b) => b.updated_at - a.updated_at)
+  return fillNoteTags(matched)
+}
+
+async function createNote({ title, content = '' }) {
+  const now = Date.now()
+  const data = { title, content, created_at: now, updated_at: now }
+  const t = await tx('notes', 'readwrite')
+  const id = await promisify(t.objectStore('notes').add(data))
+  return getNoteById(id)
+}
+
+async function updateNote(id, { title, content }) {
+  const t = await tx('notes', 'readwrite')
+  const store = t.objectStore('notes')
+  const existing = await promisify(store.get(id))
+  if (!existing) return null
+  const updated = { ...existing, title, content, updated_at: Date.now() }
+  await promisify(store.put(updated))
+  return getNoteById(id)
+}
+
+async function removeNote(id) {
+  const t = await tx(['notes', 'note_tags'], 'readwrite')
+  await promisify(t.objectStore('notes').delete(id))
+  const idx = t.objectStore('note_tags').index('note_id')
+  const links = await promisify(idx.getAll(id))
+  for (const link of links) {
+    await promisify(t.objectStore('note_tags').delete(link.id))
+  }
+  return true
+}
+
+async function getNotesByTag(tagId) {
+  const t = await tx(['note_tags', 'notes'])
+  const idx = t.objectStore('note_tags').index('tag_id')
+  const links = await promisify(idx.getAll(tagId))
+  const noteStore = t.objectStore('notes')
+  const notes = []
+  for (const link of links) {
+    const n = await promisify(noteStore.get(link.note_id))
+    if (n) notes.push(n)
+  }
+  notes.sort((a, b) => b.updated_at - a.updated_at)
+  return fillNoteTags(notes)
+}
+
 export {
   getAll, getRecent, getFrequent, getByTag, getById, search,
   create, update, remove, incrementCopyCount,
   getTags, setTags,
-  getAllTags, getTagById, createTag, updateTag, removeTag, getTagSnippets
+  getAllTags, getTagById, createTag, updateTag, removeTag, getTagSnippets,
+  getAllNotes, getNoteById, searchNotes, createNote, updateNote, removeNote,
+  getNoteTags, setNoteTags, getNotesByTag
 }
