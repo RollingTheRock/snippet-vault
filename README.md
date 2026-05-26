@@ -65,13 +65,41 @@
 
 ## 界面展示
 
-> 空状态插图 — 为三大模块定制的 Notion 风格 3D 手绘插图
+### 代码片段模块 — 空状态（浅色主题）
 
-Snippets 工作台 / Notes 写作角 / HTTP 连接桥，每幅插图均经过背景去除处理，在浅色与深色主题下均有统一卡片底座承载。
+<img src="docs/screenshots/snippets-empty-light.png" width="100%" alt="Snippets Empty State Light">
 
-> 深色主题下的笔记模块 — 完整的深色模式适配，从编辑器到空状态插图
+> 空状态插图 — 为三大模块定制的 Notion 风格 3D 手绘插图，经背景去除后在圆角卡片底座上呈现
 
-编辑器、侧边栏、状态栏、命令面板均支持实时主题切换。
+### 笔记模块 — 空状态（深色主题）
+
+<img src="docs/screenshots/notes-empty-dark.png" width="100%" alt="Notes Empty State Dark">
+
+> 完整的深色模式适配，从编辑器到空状态插图全部覆盖
+
+### 代码编辑器 — 深色主题 + 实时预览
+
+<img src="docs/screenshots/editor-code-light.png" width="100%" alt="Code Editor Dark">
+
+> CodeMirror 6 自定义 GitHub 风格语法高亮，支持 15+ 语言动态加载，右侧实时预览渲染
+
+### Markdown 笔记 — 分屏编辑模式
+
+<img src="docs/screenshots/notes-split-light.png" width="100%" alt="Notes Split View">
+
+> 左侧源码编辑，右侧实时预览，支持可拖拽调整分屏比例
+
+### HTTP 客户端
+
+<img src="docs/screenshots/http-client-light.png" width="100%" alt="HTTP Client">
+
+> 环境变量替换、请求头表格编辑、多方法支持，响应结果自动格式化
+
+### 全局命令面板
+
+<img src="docs/screenshots/command-palette.png" width="100%" alt="Command Palette">
+
+> `Ctrl+K` 呼出，支持命令、模块、片段、笔记的模糊搜索与键盘导航
 
 ---
 
