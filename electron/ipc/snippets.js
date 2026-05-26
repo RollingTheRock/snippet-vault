@@ -69,7 +69,6 @@ function registerSnippetHandlers() {
     }
     return true
   })
-}
 
   // ── Notes ──
   ipcMain.handle('notes:getAll', () => notesRepo.getAll())
