@@ -1,6 +1,7 @@
 const { ipcMain, clipboard, dialog } = require('electron')
 const fs = require('fs')
 const snippetsRepo = require('../db/snippets')
+const notesRepo = require('../db/notes')
 
 function registerSnippetHandlers() {
   ipcMain.handle('snippets:getAll', () => snippetsRepo.getAll())
@@ -68,6 +69,29 @@ function registerSnippetHandlers() {
     }
     return true
   })
+}
+
+  // ── Notes ──
+  ipcMain.handle('notes:getAll', () => notesRepo.getAll())
+
+  ipcMain.handle('notes:getById', (_, id) => notesRepo.getById(id))
+
+  ipcMain.handle('notes:search', (_, query) => notesRepo.search(query))
+
+  ipcMain.handle('notes:create', (_, data) => notesRepo.create(data))
+
+  ipcMain.handle('notes:update', (_, id, data) => notesRepo.update(id, data))
+
+  ipcMain.handle('notes:delete', (_, id) => {
+    notesRepo.remove(id)
+    return true
+  })
+
+  ipcMain.handle('notes:getTags', (_, id) => notesRepo.getTags(id))
+
+  ipcMain.handle('notes:setTags', (_, id, tagIds) => notesRepo.setTags(id, tagIds))
+
+  ipcMain.handle('notes:getByTag', (_, tagId) => notesRepo.getByTag(tagId))
 }
 
 module.exports = { registerSnippetHandlers }

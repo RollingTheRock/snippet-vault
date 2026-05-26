@@ -1,34 +1,25 @@
 <template>
   <div class="main-manager" tabindex="-1" @keydown="handleManagerKeydown">
-    <!-- Toolbar -->
-    <div class="toolbar">
+    <!-- Title Bar -->
+    <div class="title-bar">
       <div class="brand">
         <div class="brand-icon">
-          <AppIcon name="layout" :size="17" />
+          <img src="/illustrations/logo.png" alt="SnippetVault" width="18" height="18" draggable="false" />
         </div>
         <span>SnippetVault</span>
       </div>
-      <div class="toolbar-actions">
-        <button ref="btnNew" class="btn btn-primary" @click="handleNew" :style="{ transform: `translate(${magNew.offsetX.value}px, ${magNew.offsetY.value}px)` }">
+
+      <button class="cmd-palette-trigger" @click="openCommandPalette">
+        <AppIcon name="search" :size="13" />
+        <span>搜索命令...</span>
+        <kbd class="cmd-kbd">⌘K</kbd>
+      </button>
+
+      <div class="title-bar-actions">
+        <button ref="btnNew" class="btn btn-primary" @click="handleNew">
           <AppIcon name="plus" :size="13" />
           <span>新建</span>
         </button>
-        <button ref="btnSave" class="btn btn-secondary" @click="handleSave" :disabled="!hasChanges" :style="{ transform: `translate(${magSave.offsetX.value}px, ${magSave.offsetY.value}px)` }">
-          <AppIcon name="save" :size="13" />
-          <span>保存</span>
-        </button>
-        <button ref="btnDelete" class="btn btn-secondary btn-danger" @click="handleDelete" :disabled="!selectedId" :style="{ transform: `translate(${magDelete.offsetX.value}px, ${magDelete.offsetY.value}px)` }">
-          <AppIcon name="trash" :size="13" />
-          <span>删除</span>
-        </button>
-        <div class="toolbar-divider" />
-        <button ref="btnExport" class="btn btn-ghost" @click="handleExport">
-          <AppIcon name="download" :size="13" />
-        </button>
-        <button ref="btnImport" class="btn btn-ghost" @click="handleImport">
-          <AppIcon name="upload" :size="13" />
-        </button>
-        <div class="toolbar-divider" />
         <button class="btn btn-ghost theme-toggle" @click="toggleTheme" :title="isDark ? '切换浅色' : '切换深色'">
           <AppIcon :name="isDark ? 'sun' : 'moon'" :size="14" />
         </button>
@@ -37,9 +28,13 @@
 
     <!-- Content -->
     <div class="content">
+      <ActivityBar v-model="activeModule" />
+
       <!-- Sidebar -->
       <div class="sidebar">
-        <div class="search-wrapper">
+        <Transition name="sidebar-slide" mode="out-in">
+          <div v-if="activeModule === 'snippets'" key="sb-snippets" class="module-panel">
+          <div class="search-wrapper">
           <AppIcon name="search" :size="14" class="search-icon" />
           <input
             v-model="searchQuery"
@@ -92,12 +87,103 @@
           :snippets="snippetStore.snippets"
           :selectedId="snippetStore.selectedId"
           @select="snippetStore.selectedId = $event"
+          @reorder="ids => { /* drag reorder */ }"
         />
+        </div>
+        <div v-else-if="activeModule === 'notes'" key="sb-notes" class="module-panel">
+          <div class="search-wrapper">
+            <AppIcon name="search" :size="14" class="search-icon" />
+            <input
+              v-model="noteSearchQuery"
+              @input="handleNoteSearch"
+              class="search-input"
+              placeholder="搜索笔记..."
+            />
+          </div>
+          <div class="tag-cloud" v-if="tagStore.tags.length > 0">
+            <div class="tag-cloud-label">
+              <AppIcon name="tag" :size="11" />
+              <span>标签筛选</span>
+            </div>
+            <div class="tag-cloud-items">
+              <span
+                v-for="tag in tagStore.tags"
+                :key="tag.id"
+                class="tag-cloud-item"
+                :class="{ active: noteStore.filterTagId === tag.id }"
+                :style="{
+                  background: noteStore.filterTagId === tag.id ? tag.color + '16' : tag.color + '0a',
+                  color: tag.color,
+                  borderColor: noteStore.filterTagId === tag.id ? tag.color + '30' : 'transparent'
+                }"
+                @click="toggleNoteTagFilter(tag.id)"
+              >
+                <span class="tag-dot" :style="{ background: tag.color }" />
+                {{ tag.name }}
+              </span>
+            </div>
+          </div>
+          <div class="list-header">
+            <span class="list-count">{{ noteStore.notes.length }} 个笔记</span>
+          </div>
+          <div class="note-list">
+            <div
+              v-for="(note, i) in noteStore.notes"
+              :key="note.id"
+              class="note-item"
+              :class="{ active: noteStore.selectedId === note.id }"
+              draggable="true"
+              @click="noteStore.selectedId = note.id"
+              @dragstart="noteDragId = note.id; noteDragFrom = i"
+              @dragover.prevent
+              @drop="handleNoteDrop(i)"
+            >
+              <div class="note-title-row">
+                <span class="note-title">{{ note.title || '未命名笔记' }}</span>
+                <span v-if="note.updated_at" class="note-time">{{ formatTime(note.updated_at) }}</span>
+              </div>
+              <div class="note-preview">{{ note.content.substring(0, 60).replace(/\n/g, ' ') }}...</div>
+              <div class="note-meta">
+                <span
+                  v-for="tag in (note.tags || []).slice(0, 3)"
+                  :key="tag.id"
+                  class="note-tag-pill"
+                  :style="{ background: tag.color + '14', color: tag.color, borderColor: tag.color + '25' }"
+                >
+                  {{ tag.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+          </div>
+          <div v-else-if="activeModule === 'http'" key="sb-http" class="module-panel http-env-panel">
+          <div class="panel-header">
+            <AppIcon name="settings" :size="12" />
+            <span>环境变量</span>
+          </div>
+          <div class="env-list">
+            <div v-for="(env, i) in httpStore.envVars" :key="i" class="env-row">
+              <input v-model="env.name" class="env-input env-name" placeholder="变量名" />
+              <input v-model="env.value" class="env-input env-value" placeholder="值" />
+              <button class="env-remove" @click="httpStore.removeEnvVar(i)">
+                <AppIcon name="x" :size="12" />
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-ghost add-env-btn" @click="httpStore.addEnvVar()">
+            <AppIcon name="plus" :size="12" />
+            <span>添加变量</span>
+          </button>
+          <div class="env-hint">
+            使用 <code v-pre>{{name}}</code> 在 URL / Header / Body 中引用
+          </div>
+          </div>
+        </Transition>
       </div>
 
       <!-- Editor -->
       <Transition name="fade-slide" mode="out-in">
-        <div class="editor-area" v-if="selectedSnippet" key="editor" ref="editorAreaRef">
+        <div class="editor-area" v-if="activeModule === 'snippets' && selectedSnippet" key="snippet-editor" ref="editorAreaRef">
           <!-- Glow cursor -->
           <div class="glow-cursor" :style="{
             left: `${editorGlow.x.value}px`,
@@ -160,12 +246,15 @@
               :isDark="isDark"
               placeholder="输入代码..."
               :class="{ 'md-full': editForm.language === 'markdown' && mdMode === 'code', 'md-half': editForm.language === 'markdown' && mdMode === 'split' }"
+              :style="editForm.language === 'markdown' && mdMode === 'split' ? { flexBasis: splitRatio + '%' } : {}"
             />
+            <div v-if="editForm.language === 'markdown' && mdMode === 'split'" class="split-resizer" @mousedown="startResize" />
             <MarkdownPreview
               v-if="editForm.language === 'markdown' && mdMode !== 'code'"
               :content="editForm.content"
               :isDark="isDark"
               :class="{ 'md-full': mdMode === 'preview', 'md-half': mdMode === 'split' }"
+              :style="editForm.language === 'markdown' && mdMode === 'split' ? { flexBasis: (100 - splitRatio) + '%' } : {}"
             />
           </div>
 
@@ -174,6 +263,18 @@
               <AppIcon name="eye" :size="13" />
               <span>预览</span>
             </button>
+            <button
+              v-if="['html','css','javascript'].includes(editForm.language)"
+              class="btn btn-secondary"
+              @click="runCode"
+            >
+              <AppIcon name="zap" :size="13" />
+              <span>运行</span>
+            </button>
+            <button class="btn btn-secondary" @click="openScreenshot">
+              <AppIcon name="download" :size="13" />
+              <span>导出图片</span>
+            </button>
             <button ref="btnCopy" class="btn btn-secondary" @click="handleCopy">
               <AppIcon name="copy" :size="13" />
               <span>复制</span>
@@ -181,46 +282,199 @@
           </div>
         </div>
 
-        <div class="empty-state" v-else key="empty" ref="emptyStateRef">
-          <!-- Glow cursor -->
-          <div class="glow-cursor" :style="{
-            left: `${emptyGlow.x.value}px`,
-            top: `${emptyGlow.y.value}px`,
-            opacity: emptyGlow.visible.value ? 1 : 0
-          }" />
-          <div class="empty-art">
-            <div class="art-window">
-              <div class="art-window-header">
-                <span class="art-dot red" />
-                <span class="art-dot yellow" />
-                <span class="art-dot green" />
-              </div>
-              <div class="art-window-body">
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-line" /><div class="art-line short" />
-                <div class="art-bracket" />
-              </div>
-            </div>
-            <div class="art-floating art-float-1">
-              <AppIcon name="code" :size="16" />
-            </div>
-            <div class="art-floating art-float-2">
-              <AppIcon name="tag" :size="14" />
-            </div>
-            <div class="art-floating art-float-3">
-              <AppIcon name="zap" :size="12" />
+        <EmptyState v-else-if="activeModule === 'snippets'" module="snippets" key="snippet-empty" @create="handleNew" />
+
+        <!-- Notes Editor -->
+        <div class="editor-area" v-else-if="activeModule === 'notes' && noteStore.selectedNote" key="note-editor">
+          <input
+            v-model="noteEditForm.title"
+            class="title-input"
+            placeholder="笔记标题"
+          />
+          <div class="editor-toolbar">
+            <TagInput v-model="noteCurrentTags" />
+            <div class="md-mode-switcher">
+              <button class="mode-btn" :class="{ active: noteMdMode === 'code' }" @click="noteMdMode = 'code'">
+                <AppIcon name="code" :size="12" /> 源码
+              </button>
+              <button class="mode-btn" :class="{ active: noteMdMode === 'split' }" @click="noteMdMode = 'split'">
+                <AppIcon name="layout" :size="12" /> 分屏
+              </button>
+              <button class="mode-btn" :class="{ active: noteMdMode === 'preview' }" @click="noteMdMode = 'preview'">
+                <AppIcon name="eye" :size="12" /> 预览
+              </button>
             </div>
           </div>
-          <h3>选择一个片段或创建新片段</h3>
-          <p>使用左侧浏览已有片段，或点击上方「新建」开始</p>
-          <div class="empty-shortcut">
-            <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd>
-            <span>快速启动</span>
+          <div class="editor-body" :class="{ split: noteMdMode === 'split' }">
+            <CodeEditor
+              v-show="noteMdMode !== 'preview'"
+              v-model="noteEditForm.content"
+              language="markdown"
+              :isDark="isDark"
+              placeholder="输入 Markdown 内容..."
+              :class="{ 'md-full': noteMdMode === 'code', 'md-half': noteMdMode === 'split' }"
+              :style="noteMdMode === 'split' ? { flexBasis: splitRatio + '%' } : {}"
+            />
+            <div v-if="noteMdMode === 'split'" class="split-resizer" @mousedown="startResize" />
+            <MarkdownPreview
+              v-if="noteMdMode !== 'code'"
+              :content="noteEditForm.content"
+              :isDark="isDark"
+              :class="{ 'md-full': noteMdMode === 'preview', 'md-half': noteMdMode === 'split' }"
+              :style="noteMdMode === 'split' ? { flexBasis: (100 - splitRatio) + '%' } : {}"
+            />
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-primary" @click="handleNoteSave">
+              <AppIcon name="save" :size="13" /><span>保存</span>
+            </button>
+            <button class="btn btn-secondary btn-danger" @click="handleNoteDelete">
+              <AppIcon name="trash" :size="13" /><span>删除</span>
+            </button>
+          </div>
+        </div>
+
+        <EmptyState v-else-if="activeModule === 'notes'" module="notes" key="note-empty" @create="handleNew" />
+
+        <!-- HTTP Client -->
+        <div class="http-client" v-else-if="activeModule === 'http'" key="http-client">
+          <div class="http-request-bar">
+            <select v-model="httpStore.method" class="http-method">
+              <option v-for="m in httpStore.METHODS" :key="m">{{ m }}</option>
+            </select>
+            <input
+              v-model="httpStore.url"
+              class="http-url"
+              placeholder="输入请求 URL，如 {{baseUrl}}/posts"
+            />
+            <button
+              class="btn btn-primary http-send"
+              @click="httpStore.sendRequest(); httpTab = 'response'"
+              :disabled="httpStore.loading"
+            >
+              <AppIcon :name="httpStore.loading ? 'loader' : 'zap'" :size="13" />
+              <span>{{ httpStore.loading ? '发送中...' : '发送' }}</span>
+            </button>
+          </div>
+
+          <div class="http-tabs">
+            <button
+              class="http-tab"
+              :class="{ active: httpTab === 'headers' }"
+              @click="httpTab = 'headers'"
+            >请求头</button>
+            <button
+              class="http-tab"
+              :class="{ active: httpTab === 'body' }"
+              @click="httpTab = 'body'"
+            >请求体</button>
+            <button
+              class="http-tab"
+              :class="{ active: httpTab === 'response' }"
+              @click="httpTab = 'response'"
+            >响应</button>
+          </div>
+
+          <div class="http-panel" v-show="httpTab === 'headers'">
+            <div class="http-header-row" v-for="(h, i) in httpStore.headers" :key="i">
+              <input type="checkbox" v-model="h.enabled" class="http-h-check" />
+              <input v-model="h.key" class="http-h-key" placeholder="Header 名称" />
+              <input v-model="h.value" class="http-h-value" placeholder="Header 值" />
+              <button class="env-remove" @click="httpStore.removeHeader(i)">
+                <AppIcon name="x" :size="12" />
+              </button>
+            </div>
+            <button class="btn btn-ghost add-row-btn" @click="httpStore.addHeader()">
+              <AppIcon name="plus" :size="12" />
+              <span>添加 Header</span>
+            </button>
+          </div>
+
+          <div class="http-panel http-body-panel" v-show="httpTab === 'body'">
+            <CodeEditor
+              v-model="httpStore.body"
+              language="json"
+              :isDark="isDark"
+              placeholder="请求体内容 (JSON / Form / Text)..."
+            />
+          </div>
+
+          <div class="http-panel" v-show="httpTab === 'response'">
+            <div v-if="httpStore.error" class="http-error">
+              <AppIcon name="alert-circle" :size="16" />
+              <span>{{ httpStore.error }}</span>
+            </div>
+            <div v-else-if="httpStore.response" class="http-response">
+              <div class="http-res-meta">
+                <span class="http-status" :class="{ ok: httpStore.response.ok, err: !httpStore.response.ok }">
+                  {{ httpStore.response.status }} {{ httpStore.response.statusText }}
+                </span>
+                <span class="http-time">{{ httpStore.response.time }}ms</span>
+              </div>
+              <div class="http-res-headers">
+                <div v-for="(v, k) in httpStore.response.headers" :key="k" class="http-res-h">
+                  <span class="http-res-hk">{{ k }}:</span>
+                  <span class="http-res-hv">{{ v }}</span>
+                </div>
+              </div>
+              <CodeEditor
+                v-model="httpStore.response.bodyFormatted"
+                language="json"
+                :isDark="isDark"
+                :readOnly="true"
+                placeholder="响应内容..."
+              />
+            </div>
+            <div v-else class="http-empty-res">
+              <AppIcon name="zap" :size="32" />
+              <p>点击「发送」查看响应</p>
+            </div>
           </div>
         </div>
       </Transition>
     </div>
+    <!-- Code Screenshot -->
+    <CodeScreenshot ref="screenshotRef" />
+
+    <!-- Command Palette -->
+    <CommandPalette
+      ref="commandPaletteRef"
+      :snippets="snippetStore.snippets"
+      :notes="noteStore.notes"
+      :activeModule="activeModule"
+      @selectSnippet="id => { activeModule = 'snippets'; snippetStore.selectedId = id }"
+      @selectNote="id => { activeModule = 'notes'; noteStore.selectedId = id }"
+      @switchModule="mod => activeModule = mod"
+      @newSnippet="handleNew"
+      @newNote="handleNew"
+      @resetHttp="handleNew"
+      @toggleTheme="toggleTheme"
+      @exportData="handleExport"
+      @importData="handleImport"
+      @preview="handlePreview"
+      @copy="handleCopy"
+    />
+
+    <!-- Code Run Sandbox -->
+    <Transition name="fade-slide">
+      <div class="preview-overlay" v-if="runVisible" @click="runVisible = false">
+        <div class="preview-panel" @click.stop>
+          <div class="preview-header">
+            <div class="preview-title">
+              <AppIcon name="zap" :size="14" />
+              <span>运行结果</span>
+            </div>
+            <button class="preview-close" @click="runVisible = false">
+              <AppIcon name="x" :size="14" />
+            </button>
+          </div>
+          <div class="preview-body">
+            <iframe v-if="runHtml" :srcdoc="runHtml" class="sandbox-frame" sandbox="allow-scripts"></iframe>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Web Preview Overlay -->
     <Transition name="fade-slide">
       <div class="preview-overlay" v-if="previewVisible" @click="closePreview">
@@ -240,39 +494,112 @@
         </div>
       </div>
     </Transition>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-left">
+        <span v-if="autoSaveStatus" class="status-save-indicator">
+          <AppIcon :name="autoSaveStatus === 'saved' ? 'check' : 'loader'" :size="10" />
+          {{ autoSaveStatus === 'saved' ? '已保存' : '保存中...' }}
+        </span>
+      </div>
+      <div class="status-center">
+        <span v-if="activeModule === 'snippets' && selectedSnippet" class="status-item">
+          {{ selectedSnippet.language === 'markdown' ? 'Markdown' : selectedSnippet.language }}
+        </span>
+        <span v-else-if="activeModule === 'notes' && noteStore.selectedNote" class="status-item">Markdown</span>
+        <span v-else-if="activeModule === 'http'" class="status-item">HTTP Client</span>
+      </div>
+      <div class="status-right">
+        <span v-if="editorStats" class="status-item">{{ editorStats }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useSnippetStore } from '../stores/snippets.js'
+import { useNoteStore } from '../stores/notes.js'
+import { useHttpStore } from '../stores/http.js'
 import { useTagStore } from '../stores/tags.js'
 import { useTheme } from '../composables/useTheme.js'
 import SnippetList from '../components/SnippetList.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import TagInput from '../components/TagInput.vue'
 import MarkdownPreview from '../components/MarkdownPreview.vue'
+import EmptyState from '../components/EmptyState.vue'
+import CommandPalette from '../components/CommandPalette.vue'
+import CodeScreenshot from '../components/CodeScreenshot.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useToast } from '../composables/useToast.js'
 import { useRipple } from '../composables/useRipple.js'
 import { useGlowCursor } from '../composables/useGlowCursor.js'
 import { useMagnetic } from '../composables/useMagnetic.js'
 import { api } from '../api/index.js'
+import ActivityBar from '../components/ActivityBar.vue'
 
 const snippetStore = useSnippetStore()
+const noteStore = useNoteStore()
+const httpStore = useHttpStore()
 const tagStore = useTagStore()
+const activeModule = ref('snippets') // 'snippets' | 'notes' | 'http'
 const { success, error: showError } = useToast()
 const { isDark, toggle: toggleTheme } = useTheme()
 
 const searchQuery = ref('')
+const noteSearchQuery = ref('')
+const httpTab = ref('headers')
+const splitRatio = ref(50)
+const noteDragId = ref(null)
+const noteDragFrom = ref(-1)
+let isResizing = false
+
+function startResize(e) {
+  isResizing = true
+  const container = e.target.parentElement
+  const startX = e.clientX
+  const startRatio = splitRatio.value
+
+  function onMouseMove(ev) {
+    if (!isResizing) return
+    const delta = ev.clientX - startX
+    const newRatio = startRatio + (delta / container.offsetWidth) * 100
+    splitRatio.value = Math.max(20, Math.min(80, newRatio))
+  }
+
+  function onMouseUp() {
+    isResizing = false
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
 const editForm = reactive({ title: '', content: '', language: 'javascript' })
 const currentTags = ref([])
-const mdMode = ref('split') // 'code' | 'split' | 'preview'
+const mdMode = ref('split')
+
+// Notes
+const noteEditForm = reactive({ title: '', content: '' })
+const noteCurrentTags = ref([])
+const noteMdMode = ref('split')
+
+watch(() => noteStore.selectedNote, (note) => {
+  if (note) {
+    noteEditForm.title = note.title
+    noteEditForm.content = note.content
+    noteCurrentTags.value = note.tags || []
+  }
+}, { immediate: true })
 
 // Web preview overlay
 const previewVisible = ref(false)
 const previewContent = ref('')
 const previewLanguage = ref('text')
+const runVisible = ref(false)
+const runHtml = ref('')
 
 function openPreviewOverlay(content, language) {
   previewContent.value = content
@@ -298,31 +625,14 @@ const filterTabs = [
 ]
 
 const btnNew = ref(null)
-const btnSave = ref(null)
-const btnDelete = ref(null)
-const btnExport = ref(null)
-const btnImport = ref(null)
-const btnPreview = ref(null)
-const btnCopy = ref(null)
 const editorAreaRef = ref(null)
-const emptyStateRef = ref(null)
+const screenshotRef = ref(null)
+const autoSaveStatus = ref('')
 
 useRipple(btnNew)
-useRipple(btnSave)
-useRipple(btnDelete)
-useRipple(btnExport)
-useRipple(btnImport)
-useRipple(btnPreview)
-useRipple(btnCopy)
 
-// Glow cursor for editor and empty state
+// Glow cursor for editor
 const editorGlow = useGlowCursor(editorAreaRef)
-const emptyGlow = useGlowCursor(emptyStateRef)
-
-// Magnetic buttons
-const magNew = useMagnetic(btnNew, { strength: 0.25, radius: 80 })
-const magSave = useMagnetic(btnSave, { strength: 0.25, radius: 80 })
-const magDelete = useMagnetic(btnDelete, { strength: 0.25, radius: 80 })
 
 const languages = [
   { value: 'html', label: 'HTML' },
@@ -343,17 +653,112 @@ const languages = [
   { value: 'markdown', label: 'Markdown' }
 ]
 
-const selectedId = computed(() => snippetStore.selectedId)
 const selectedSnippet = computed(() => snippetStore.selectedSnippet)
-const hasChanges = computed(() => {
-  if (!selectedSnippet.value) return false
-  const tagsChanged = JSON.stringify((selectedSnippet.value.tags || []).map(t => t.id).sort()) !==
-    JSON.stringify(currentTags.value.map(t => t.id).sort())
-  return editForm.title !== selectedSnippet.value.title ||
-    editForm.content !== selectedSnippet.value.content ||
-    editForm.language !== selectedSnippet.value.language ||
-    tagsChanged
+const selectedId = computed(() => {
+  if (activeModule.value === 'notes') return noteStore.selectedId
+  if (activeModule.value === 'http') return !!httpStore.url
+  return snippetStore.selectedId
 })
+
+// Auto-save
+let saveTimer = null
+function triggerAutoSave() {
+  autoSaveStatus.value = 'saving'
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    try {
+      if (activeModule.value === 'notes' && noteStore.selectedId) {
+        await noteStore.updateNote(noteStore.selectedId, {
+          title: noteEditForm.title,
+          content: noteEditForm.content
+        })
+        await api.setNoteTags(noteStore.selectedId, noteCurrentTags.value.map(t => t.id))
+        await noteStore.loadNotes()
+      } else if (activeModule.value === 'snippets' && snippetStore.selectedId) {
+        await snippetStore.updateSnippet(snippetStore.selectedId, {
+          title: editForm.title,
+          content: editForm.content,
+          language: editForm.language
+        })
+        await api.setSnippetTags(snippetStore.selectedId, currentTags.value.map(t => t.id))
+        await snippetStore.loadSnippets()
+      }
+      autoSaveStatus.value = 'saved'
+      setTimeout(() => { autoSaveStatus.value = '' }, 2000)
+    } catch (e) {
+      autoSaveStatus.value = ''
+    }
+  }, 800)
+}
+
+watch(() => [noteEditForm.title, noteEditForm.content, noteCurrentTags.value], () => {
+  if (activeModule.value === 'notes' && noteStore.selectedId) triggerAutoSave()
+}, { deep: true })
+
+watch(() => [editForm.title, editForm.content, editForm.language, currentTags.value], () => {
+  if (activeModule.value === 'snippets' && snippetStore.selectedId) triggerAutoSave()
+}, { deep: true })
+
+// Status bar stats
+const editorStats = computed(() => {
+  if (activeModule.value === 'snippets' && selectedSnippet.value) {
+    const lines = (editForm.content.match(/\n/g) || []).length + 1
+    const chars = editForm.content.length
+    return `${lines} 行 · ${chars} 字符`
+  }
+  if (activeModule.value === 'notes' && noteStore.selectedNote) {
+    const lines = (noteEditForm.content.match(/\n/g) || []).length + 1
+    const chars = noteEditForm.content.length
+    return `${lines} 行 · ${chars} 字符`
+  }
+  if (activeModule.value === 'http' && httpStore.response) {
+    const size = new Blob([httpStore.response.body]).size
+    return `${httpStore.response.status} · ${httpStore.response.time}ms · ${formatBytes(size)}`
+  }
+  return ''
+})
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B'
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB'
+  return (b / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts
+  const min = 60 * 1000
+  const hour = 60 * min
+  const day = 24 * hour
+  if (diff < min) return '刚刚'
+  if (diff < hour) return Math.floor(diff / min) + '分钟前'
+  if (diff < day) return Math.floor(diff / hour) + '小时前'
+  return new Date(ts).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+function handleNoteDrop(toIndex) {
+  const fromIndex = noteDragFrom.value
+  if (fromIndex === toIndex || fromIndex < 0) return
+  const items = [...noteStore.notes]
+  const [moved] = items.splice(fromIndex, 1)
+  items.splice(toIndex, 0, moved)
+  noteStore.notes = items
+  noteDragId.value = null
+  noteDragFrom.value = -1
+}
+
+function openCommandPalette() {
+  window.dispatchEvent(new CustomEvent('app:command-palette'))
+}
+
+function openScreenshot() {
+  if (selectedSnippet.value) {
+    screenshotRef.value?.open({
+      title: selectedSnippet.value.title,
+      code: selectedSnippet.value.content,
+      isDark: isDark.value
+    })
+  }
+}
 
 watch(selectedSnippet, async (snippet) => {
   if (snippet) {
@@ -372,6 +777,18 @@ async function handleSearch() {
   await snippetStore.searchSnippets(searchQuery.value)
 }
 
+async function handleNoteSearch() {
+  await noteStore.searchNotes(noteSearchQuery.value)
+}
+
+async function toggleNoteTagFilter(tagId) {
+  if (noteStore.filterTagId === tagId) {
+    await noteStore.loadNotes()
+  } else {
+    await noteStore.loadByTag(tagId)
+  }
+}
+
 async function setFilter(mode) {
   if (mode === 'all') await snippetStore.loadSnippets()
   else if (mode === 'recent') await snippetStore.loadRecent()
@@ -387,35 +804,99 @@ async function toggleTagFilter(tagId) {
 }
 
 async function handleNew() {
-  await snippetStore.createSnippet({
-    title: '未命名片段',
-    content: '',
-    language: 'javascript'
-  })
-  success('新片段已创建')
+  if (activeModule.value === 'snippets') {
+    await snippetStore.createSnippet({
+      title: '未命名片段',
+      content: '',
+      language: 'javascript'
+    })
+    success('新片段已创建')
+  } else if (activeModule.value === 'notes') {
+    await noteStore.createNote({
+      title: '未命名笔记',
+      content: ''
+    })
+    success('新笔记已创建')
+  } else if (activeModule.value === 'http') {
+    httpStore.reset()
+    success('请求已重置')
+  }
 }
 
 async function handleSave() {
+  if (activeModule.value === 'http') {
+    await httpStore.sendRequest()
+    httpTab.value = 'response'
+    if (httpStore.error) {
+      showError(httpStore.error)
+    } else if (httpStore.response) {
+      success(`请求完成 (${httpStore.response.status})`)
+    }
+    return
+  }
   if (!selectedId.value) return
   try {
-    await snippetStore.updateSnippet(selectedId.value, {
-      title: editForm.title,
-      content: editForm.content,
-      language: editForm.language
-    })
-    await api.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
-    await snippetStore.loadSnippets()
-    success('保存成功')
+    if (activeModule.value === 'notes') {
+      await noteStore.updateNote(noteStore.selectedId, {
+        title: noteEditForm.title,
+        content: noteEditForm.content
+      })
+      await api.setNoteTags(noteStore.selectedId, noteCurrentTags.value.map(t => t.id))
+      await noteStore.loadNotes()
+      success('笔记保存成功')
+    } else {
+      await snippetStore.updateSnippet(selectedId.value, {
+        title: editForm.title,
+        content: editForm.content,
+        language: editForm.language
+      })
+      await api.setSnippetTags(selectedId.value, currentTags.value.map(t => t.id))
+      await snippetStore.loadSnippets()
+      success('保存成功')
+    }
   } catch (e) {
     showError('保存失败')
+  }
+}
+
+async function handleNoteSave() {
+  if (!noteStore.selectedId) return
+  try {
+    await noteStore.updateNote(noteStore.selectedId, {
+      title: noteEditForm.title,
+      content: noteEditForm.content
+    })
+    await api.setNoteTags(noteStore.selectedId, noteCurrentTags.value.map(t => t.id))
+    await noteStore.loadNotes()
+    success('笔记保存成功')
+  } catch (e) {
+    showError('保存失败')
+  }
+}
+
+async function handleNoteDelete() {
+  if (!noteStore.selectedId) return
+  try {
+    await noteStore.deleteNote(noteStore.selectedId)
+    success('笔记已删除')
+  } catch (e) {
+    showError('删除失败')
   }
 }
 
 async function handleDelete() {
   if (!selectedId.value) return
   try {
-    await snippetStore.deleteSnippet(selectedId.value)
-    success('已删除')
+    if (activeModule.value === 'notes') {
+      await noteStore.deleteNote(noteStore.selectedId)
+      success('笔记已删除')
+    } else if (activeModule.value === 'http') {
+      httpStore.reset()
+      success('请求已重置')
+    } else {
+      await snippetStore.deleteSnippet(selectedId.value)
+      success('已删除')
+    }
   } catch (e) {
     showError('删除失败')
   }
@@ -457,6 +938,30 @@ function handlePreview() {
   }
 }
 
+function runCode() {
+  if (!selectedSnippet.value) return
+  const lang = selectedSnippet.value.language
+  const code = selectedSnippet.value.content
+  let html = ''
+  if (lang === 'html') {
+    html = code
+  } else if (lang === 'css') {
+    html = `<style>${code}</style><div style="padding:20px;font-family:sans-serif;color:#333"><h1>CSS 运行结果</h1><p>上方样式已应用到当前页面</p><button class="demo-btn">演示按钮</button><input class="demo-input" placeholder="演示输入框" /></div>`
+  } else if (lang === 'javascript') {
+    html = `<!DOCTYPE html><html><head><style>body{font-family:JetBrains Mono,monospace;padding:16px;background:#1e1e1e;color:#d4d4d4;font-size:13px} .log{color:#9cdcfe;margin:2px 0} .error{color:#f44747} .warn{color:#ffcc00}</style></head><body><div id="out"></div><script>
+const out=document.getElementById('out');
+const orig={l:console.log,e:console.error,w:console.warn};
+function write(t,cls){const d=document.createElement('div');d.className=cls;d.textContent=t;out.appendChild(d)}
+console.log=function(...a){write(a.join(' '),'log');orig.l(...a)};
+console.error=function(...a){write(a.join(' '),'error');orig.e(...a)};
+console.warn=function(...a){write(a.join(' '),'warn');orig.w(...a)};
+try{${code}}catch(err){console.error(err.toString())}
+<\/script></body></html>`
+  }
+  runHtml.value = html
+  runVisible.value = true
+}
+
 function handleManagerKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === ' ') {
     e.preventDefault()
@@ -466,6 +971,7 @@ function handleManagerKeydown(e) {
 
 onMounted(() => {
   snippetStore.loadSnippets()
+  noteStore.loadNotes()
   tagStore.loadTags()
 })
 </script>
@@ -475,34 +981,40 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: linear-gradient(180deg, #f0f0f2 0%, #e8e8ec 100%);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(0,0,0,0.025) 1px, transparent 0),
+    linear-gradient(180deg, #f0f0f2 0%, #e8e8ec 100%);
+  background-size: 20px 20px, 100% 100%;
   overflow: hidden;
 }
 
 [data-theme="dark"] .main-manager {
-  background: linear-gradient(180deg, #1c1c1e 0%, #161618 100%);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.02) 1px, transparent 0),
+    linear-gradient(180deg, #1c1c1e 0%, #161618 100%);
+  background-size: 20px 20px, 100% 100%;
 }
 
 /* ── Toolbar ── */
-.toolbar {
-  height: 48px;
+.title-bar {
+  height: 40px;
   background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(250,250,252,0.92) 100%);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
   box-shadow: var(--inset-divider-bottom), 0 0.5px 2px rgba(0,0,0,0.03);
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 14px;
+  padding: 0 14px;
+  gap: 12px;
   -webkit-app-region: drag;
   position: relative;
   z-index: 20;
   flex-shrink: 0;
 }
-[data-theme="dark"] .toolbar {
+[data-theme="dark"] .title-bar {
   background: linear-gradient(180deg, rgba(44,44,46,0.9) 0%, rgba(58,58,60,0.92) 100%);
 }
-.toolbar > * {
+.title-bar > * {
   -webkit-app-region: no-drag;
 }
 .brand {
@@ -511,39 +1023,79 @@ onMounted(() => {
   gap: 8px;
   color: var(--text-primary);
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.35px;
+  font-size: 13.5px;
+  letter-spacing: -0.3px;
 }
 .brand-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   background: linear-gradient(180deg, #e8f4fd 0%, #d0e8fa 100%);
   color: var(--accent-blue);
   border-radius: var(--radius-sm);
   box-shadow: var(--highlight-top), 0 0.5px 1px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.brand-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 [data-theme="dark"] .brand-icon {
   background: linear-gradient(180deg, #1c3a5c 0%, #0d2137 100%);
 }
-.toolbar-actions {
+.title-bar-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
 }
-.toolbar-divider {
-  width: 1px;
-  height: 18px;
-  background: var(--border-color);
-  margin: 0 2px;
+.cmd-palette-trigger {
+  flex: 1;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  border: 0.5px solid var(--border-subtle);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--inset-sunken);
+}
+[data-theme="dark"] .cmd-palette-trigger {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.cmd-palette-trigger:hover {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+.cmd-palette-trigger span {
+  flex: 1;
+  text-align: left;
+}
+.cmd-kbd {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 0.5px solid var(--border-subtle);
+  font-family: 'SF Mono', monospace;
 }
 .theme-toggle {
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -629,6 +1181,49 @@ onMounted(() => {
 }
 [data-theme="dark"] .btn-ghost:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Status Bar ── */
+.status-bar {
+  height: 24px;
+  background: linear-gradient(180deg, rgba(250,250,252,0.95) 0%, rgba(240,240,242,0.95) 100%);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: var(--inset-divider-top);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  z-index: 20;
+}
+[data-theme="dark"] .status-bar {
+  background: linear-gradient(180deg, rgba(28,28,30,0.95) 0%, rgba(22,22,24,0.95) 100%);
+}
+.status-left,
+.status-center,
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 80px;
+}
+.status-center {
+  justify-content: center;
+}
+.status-right {
+  justify-content: flex-end;
+}
+.status-item {
+  font-variant-numeric: tabular-nums;
+}
+.status-save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-green);
+  font-weight: 500;
 }
 
 /* ═══════════════════════════════════════
@@ -930,7 +1525,7 @@ onMounted(() => {
 }
 .editor-body.split {
   flex-direction: row;
-  gap: 12px;
+  gap: 0;
 }
 .editor-body :deep(.code-editor-wrapper) {
   flex: 1;
@@ -946,6 +1541,31 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
 }
+.split-resizer {
+  width: 8px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.split-resizer:hover {
+  background: var(--border-color);
+}
+.split-resizer::before {
+  content: '';
+  width: 2px;
+  height: 24px;
+  border-radius: 1px;
+  background: var(--border-subtle);
+  transition: background 0.15s ease;
+}
+.split-resizer:hover::before {
+  background: var(--text-tertiary);
+}
 
 .editor-actions {
   display: flex;
@@ -956,148 +1576,8 @@ onMounted(() => {
 }
 
 /* ═══════════════════════════════════════
-   Empty State
+   Empty State (global helpers)
    ═══════════════════════════════════════ */
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, #ffffff 0%, #fafafc 100%);
-  gap: 14px;
-  text-align: center;
-  padding: 48px;
-}
-[data-theme="dark"] .empty-state {
-  background: linear-gradient(180deg, #2c2c2e 0%, #1c1c1e 100%);
-}
-.empty-state {
-  position: relative;
-}
-.empty-art {
-  position: relative;
-  width: 120px;
-  height: 100px;
-  margin-bottom: 8px;
-}
-.art-window {
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #f5f5f7 0%, #ececee 100%);
-  border: 0.5px solid var(--border-subtle);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  overflow: hidden;
-  animation: float-gentle 4s ease-in-out infinite;
-}
-[data-theme="dark"] .art-window {
-  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
-}
-.art-window-header {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 10px;
-  background: linear-gradient(180deg, #e8e8ed 0%, #dcdcde 100%);
-  border-bottom: 0.5px solid var(--border-subtle);
-}
-[data-theme="dark"] .art-window-header {
-  background: linear-gradient(180deg, #48484a 0%, #3a3a3c 100%);
-}
-.art-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-.art-dot.red { background: #ff5f57; }
-.art-dot.yellow { background: #febc2e; }
-.art-dot.green { background: #28c840; }
-.art-window-body {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.art-line {
-  height: 5px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, var(--border-color) 0%, var(--border-subtle) 100%);
-  animation: shimmer-line 2.5s ease-in-out infinite;
-}
-.art-line.short {
-  width: 60%;
-}
-.art-line:nth-child(2) { animation-delay: 0.2s; }
-.art-line:nth-child(3) { animation-delay: 0.4s; }
-.art-line:nth-child(4) { animation-delay: 0.6s; }
-.art-line:nth-child(5) { animation-delay: 0.8s; }
-.art-line:nth-child(6) { animation-delay: 1.0s; }
-.art-bracket {
-  width: 20px;
-  height: 14px;
-  border: 2px solid var(--accent-blue);
-  border-radius: 3px;
-  margin-top: 4px;
-  opacity: 0.4;
-  animation: pulse-bracket 2s ease-in-out infinite;
-}
-.art-floating {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
-  border: 0.5px solid var(--border-subtle);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  color: var(--accent-blue);
-}
-[data-theme="dark"] .art-floating {
-  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
-}
-.art-float-1 {
-  top: -8px;
-  right: -12px;
-  animation: float-gentle 3.5s ease-in-out infinite 0.5s;
-}
-.art-float-2 {
-  bottom: 8px;
-  left: -16px;
-  animation: float-gentle 4s ease-in-out infinite 1s;
-}
-.art-float-3 {
-  bottom: -6px;
-  right: -6px;
-  animation: float-gentle 3s ease-in-out infinite 1.5s;
-}
-
-@keyframes float-gentle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-@keyframes shimmer-line {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
-}
-@keyframes pulse-bracket {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
-}
-.empty-state h3 {
-  color: var(--text-primary);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-.empty-state p {
-  color: var(--text-secondary);
-  font-size: 13px;
-  max-width: 300px;
-  line-height: 1.5;
-}
 .empty-shortcut {
   display: flex;
   align-items: center;
@@ -1125,6 +1605,137 @@ onMounted(() => {
 }
 [data-theme="dark"] .empty-shortcut kbd {
   background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+.module-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.module-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-tertiary);
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.placeholder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #f5f5f7 0%, #ececee 100%);
+  box-shadow: var(--inset-sunken);
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+[data-theme="dark"] .placeholder-icon {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+.module-placeholder h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.module-placeholder p {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+.note-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.note-item {
+  padding: 10px 14px;
+  margin: 0 8px 4px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  border: 0.5px solid transparent;
+}
+
+.note-item:hover {
+  background: var(--bg-secondary);
+}
+
+.note-item.active {
+  background: var(--accent-blue-bg);
+  border-color: rgba(0, 113, 227, 0.12);
+}
+
+.note-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.note-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.note-time {
+  font-size: 9.5px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.note-preview {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.note-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.note-tag {
+  font-size: 10px;
+  font-weight: 500;
+  background: rgba(0,0,0,0.04);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .note-tag {
+  background: rgba(255,255,255,0.06);
+}
+
+.note-tag-pill {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 0.5px solid transparent;
 }
 
 /* ── Preview Overlay ── */
@@ -1188,8 +1799,333 @@ onMounted(() => {
   overflow: auto;
   padding: 16px;
 }
+.sandbox-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
 
-/* ── Transitions ── */
+/* ── HTTP Client ── */
+.http-client {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafc 100%);
+  padding: 18px 24px;
+  overflow: hidden;
+}
+[data-theme="dark"] .http-client {
+  background: linear-gradient(180deg, #2c2c2e 0%, #1c1c1e 100%);
+}
+
+.http-request-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.http-method {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+[data-theme="dark"] .http-method {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.http-url {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+[data-theme="dark"] .http-url {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.http-url:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2.5px var(--accent-blue-bg);
+}
+.http-send {
+  white-space: nowrap;
+}
+
+.http-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  width: fit-content;
+}
+.http-tab {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.http-tab:hover {
+  color: var(--text-primary);
+}
+.http-tab.active {
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  color: var(--text-primary);
+  box-shadow: var(--inset-sunken), 0 0.5px 1px rgba(0,0,0,0.03);
+}
+[data-theme="dark"] .http-tab.active {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+}
+
+.http-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.http-body-panel .code-editor-wrapper {
+  flex: 1;
+}
+
+.http-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.http-h-check {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+}
+.http-h-key,
+.http-h-value {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+}
+[data-theme="dark"] .http-h-key,
+[data-theme="dark"] .http-h-value {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.http-h-key {
+  width: 160px;
+}
+.http-h-value {
+  flex: 1;
+}
+.add-row-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.http-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255, 59, 48, 0.08);
+  border: 0.5px solid rgba(255, 59, 48, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--accent-red);
+  font-size: 13px;
+}
+
+.http-response {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.http-res-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 12px;
+}
+.http-status {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.http-status.ok {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--accent-green);
+}
+.http-status.err {
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--accent-red);
+}
+.http-time {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.http-res-headers {
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.http-res-h {
+  display: flex;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.8;
+  font-family: 'SF Mono', monospace;
+}
+.http-res-hk {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.http-res-hv {
+  color: var(--text-secondary);
+}
+
+.http-empty-res {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-tertiary);
+}
+.http-empty-res p {
+  font-size: 13px;
+}
+
+/* ── HTTP Env Panel (Sidebar) ── */
+.http-env-panel {
+  padding: 12px;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+.env-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.env-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.env-input {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  font-size: 11.5px;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  width: 0;
+}
+[data-theme="dark"] .env-input {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  border-color: rgba(255,255,255,0.08);
+}
+.env-name {
+  flex: 1;
+}
+.env-value {
+  flex: 1.5;
+}
+.env-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.env-remove:hover {
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--accent-red);
+}
+.add-env-btn {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.env-hint {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+.env-hint code {
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+}
+
+/* ── Sidebar Slide Transition ── */
+.sidebar-slide-enter-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sidebar-slide-leave-active {
+  transition: all 0.15s ease;
+}
+.sidebar-slide-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.sidebar-slide-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
+/* ── Fade Slide Transition ── */
 .fade-slide-enter-active {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

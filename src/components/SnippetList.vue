@@ -2,12 +2,17 @@
   <div class="snippet-list">
     <TransitionGroup name="list" tag="div" class="list-container">
       <div
-        v-for="(snippet, index) in snippets"
+        v-for="(snippet, index) in localSnippets"
         :key="snippet.id"
         class="snippet-item"
-        :class="{ active: selectedId === snippet.id }"
+        :class="{ active: selectedId === snippet.id, dragging: dragId === snippet.id }"
         :style="{ transitionDelay: `${Math.min(index * 20, 250)}ms` }"
+        draggable="true"
         @click="$emit('select', snippet.id)"
+        @dragstart="handleDragStart($event, snippet.id, index)"
+        @dragover.prevent="handleDragOver($event, index)"
+        @drop="handleDrop($event, index)"
+        @dragend="handleDragEnd"
       >
         <div class="snippet-indicator" :style="{ background: getLangColor(snippet.language) }" />
         <div class="snippet-body">
@@ -19,6 +24,7 @@
           </div>
           <div class="snippet-meta">
             <span class="snippet-lang">{{ snippet.language }}</span>
+            <span v-if="snippet.updated_at" class="snippet-time">{{ formatTime(snippet.updated_at) }}</span>
             <span v-if="snippet.tags?.length" class="snippet-tags">
               <span
                 v-for="tag in snippet.tags.slice(0, 2)"
@@ -34,8 +40,8 @@
     </TransitionGroup>
     <Transition name="fade-slide">
       <div v-if="snippets.length === 0" class="list-empty">
-        <div class="list-empty-icon">
-          <AppIcon name="search" :size="18" />
+        <div class="list-empty-art">
+          <img src="/illustrations/empty-list.png" alt="暂无内容" width="36" height="36" draggable="false" />
         </div>
         <span>暂无片段</span>
       </div>
@@ -46,8 +52,54 @@
 <script setup>
 import AppIcon from './AppIcon.vue'
 
-defineProps({ snippets: Array, selectedId: Number })
-defineEmits(['select'])
+import { ref, watch } from 'vue'
+
+const props = defineProps({ snippets: Array, selectedId: Number })
+const emit = defineEmits(['select', 'reorder'])
+
+const localSnippets = ref([...props.snippets])
+const dragId = ref(null)
+const dragFromIndex = ref(-1)
+
+watch(() => props.snippets, (val) => { localSnippets.value = [...val] }, { deep: true })
+
+function handleDragStart(e, id, index) {
+  dragId.value = id
+  dragFromIndex.value = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(id))
+}
+
+function handleDragOver(e, index) {
+  e.dataTransfer.dropEffect = 'move'
+}
+
+function handleDrop(e, toIndex) {
+  e.preventDefault()
+  const fromIndex = dragFromIndex.value
+  if (fromIndex === toIndex || fromIndex < 0) return
+  const items = [...localSnippets.value]
+  const [moved] = items.splice(fromIndex, 1)
+  items.splice(toIndex, 0, moved)
+  localSnippets.value = items
+  emit('reorder', items.map(s => s.id))
+}
+
+function handleDragEnd() {
+  dragId.value = null
+  dragFromIndex.value = -1
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts
+  const min = 60 * 1000
+  const hour = 60 * min
+  const day = 24 * hour
+  if (diff < min) return '刚刚'
+  if (diff < hour) return Math.floor(diff / min) + '分钟前'
+  if (diff < day) return Math.floor(diff / hour) + '小时前'
+  return new Date(ts).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
 
 function getLangColor(lang) {
   const colors = {
@@ -95,6 +147,10 @@ function getLangColor(lang) {
 .snippet-item.active {
   background: var(--selection-bg);
 }
+.snippet-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
 .snippet-indicator {
   width: 2.5px;
   flex-shrink: 0;
@@ -139,6 +195,11 @@ function getLangColor(lang) {
   align-items: center;
   gap: 6px;
 }
+.snippet-time {
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  font-weight: 500;
+}
 .snippet-lang {
   color: var(--text-tertiary);
   font-size: 9.5px;
@@ -174,16 +235,38 @@ function getLangColor(lang) {
   font-size: 12px;
   font-weight: 500;
 }
-.list-empty-icon {
+.list-empty-art {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, #f5f5f7 0%, #ececee 100%);
-  box-shadow: var(--inset-sunken);
-  color: var(--text-tertiary);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.8),
+    0 1px 2px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .list-empty-art {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.2);
+}
+
+.list-empty-art img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.7;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+[data-theme="dark"] .list-empty-art img {
+  opacity: 0.85;
 }
 
 .list-enter-active {

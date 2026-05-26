@@ -1,0 +1,20 @@
+{
+  "name": "SnippetVault",
+  "short_name": "SnippetVault",
+  "description": "开发者代码片段、笔记与 API 测试工具",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f0f2",
+  "theme_color": "#0071e3",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["developer tools", "productivity"],
+  "shortcuts": [
+    { "name": "新建片段", "short_name": "片段", "description": "快速创建代码片段", "url": "/?action=new-snippet", "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }] },
+    { "name": "新建笔记", "short_name": "笔记", "description": "快速创建笔记", "url": "/?action=new-note", "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }] }
+  ]
+}
