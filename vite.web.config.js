@@ -5,6 +5,7 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue()],
   root: '.',
+  base: './',
   build: {
     outDir: 'dist-web',
     rollupOptions: {
