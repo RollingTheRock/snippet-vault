@@ -4,7 +4,7 @@
     <div class="title-bar">
       <div class="brand">
         <div class="brand-icon">
-          <AppIcon name="layout" :size="16" />
+          <img src="/illustrations/logo.png" alt="SnippetVault" width="18" height="18" draggable="false" />
         </div>
         <span>SnippetVault</span>
       </div>
@@ -1036,6 +1036,14 @@ onMounted(() => {
   color: var(--accent-blue);
   border-radius: var(--radius-sm);
   box-shadow: var(--highlight-top), 0 0.5px 1px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.brand-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 [data-theme="dark"] .brand-icon {
   background: linear-gradient(180deg, #1c3a5c 0%, #0d2137 100%);
@@ -1568,148 +1576,8 @@ onMounted(() => {
 }
 
 /* ═══════════════════════════════════════
-   Empty State
+   Empty State (global helpers)
    ═══════════════════════════════════════ */
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, #ffffff 0%, #fafafc 100%);
-  gap: 14px;
-  text-align: center;
-  padding: 48px;
-}
-[data-theme="dark"] .empty-state {
-  background: linear-gradient(180deg, #2c2c2e 0%, #1c1c1e 100%);
-}
-.empty-state {
-  position: relative;
-}
-.empty-art {
-  position: relative;
-  width: 120px;
-  height: 100px;
-  margin-bottom: 8px;
-}
-.art-window {
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #f5f5f7 0%, #ececee 100%);
-  border: 0.5px solid var(--border-subtle);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  overflow: hidden;
-  animation: float-gentle 4s ease-in-out infinite;
-}
-[data-theme="dark"] .art-window {
-  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
-}
-.art-window-header {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 10px;
-  background: linear-gradient(180deg, #e8e8ed 0%, #dcdcde 100%);
-  border-bottom: 0.5px solid var(--border-subtle);
-}
-[data-theme="dark"] .art-window-header {
-  background: linear-gradient(180deg, #48484a 0%, #3a3a3c 100%);
-}
-.art-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-.art-dot.red { background: #ff5f57; }
-.art-dot.yellow { background: #febc2e; }
-.art-dot.green { background: #28c840; }
-.art-window-body {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.art-line {
-  height: 5px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, var(--border-color) 0%, var(--border-subtle) 100%);
-  animation: shimmer-line 2.5s ease-in-out infinite;
-}
-.art-line.short {
-  width: 60%;
-}
-.art-line:nth-child(2) { animation-delay: 0.2s; }
-.art-line:nth-child(3) { animation-delay: 0.4s; }
-.art-line:nth-child(4) { animation-delay: 0.6s; }
-.art-line:nth-child(5) { animation-delay: 0.8s; }
-.art-line:nth-child(6) { animation-delay: 1.0s; }
-.art-bracket {
-  width: 20px;
-  height: 14px;
-  border: 2px solid var(--accent-blue);
-  border-radius: 3px;
-  margin-top: 4px;
-  opacity: 0.4;
-  animation: pulse-bracket 2s ease-in-out infinite;
-}
-.art-floating {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
-  border: 0.5px solid var(--border-subtle);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  color: var(--accent-blue);
-}
-[data-theme="dark"] .art-floating {
-  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
-}
-.art-float-1 {
-  top: -8px;
-  right: -12px;
-  animation: float-gentle 3.5s ease-in-out infinite 0.5s;
-}
-.art-float-2 {
-  bottom: 8px;
-  left: -16px;
-  animation: float-gentle 4s ease-in-out infinite 1s;
-}
-.art-float-3 {
-  bottom: -6px;
-  right: -6px;
-  animation: float-gentle 3s ease-in-out infinite 1.5s;
-}
-
-@keyframes float-gentle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-@keyframes shimmer-line {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
-}
-@keyframes pulse-bracket {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
-}
-.empty-state h3 {
-  color: var(--text-primary);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-.empty-state p {
-  color: var(--text-secondary);
-  font-size: 13px;
-  max-width: 300px;
-  line-height: 1.5;
-}
 .empty-shortcut {
   display: flex;
   align-items: center;

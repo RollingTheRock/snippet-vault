@@ -40,8 +40,8 @@
     </TransitionGroup>
     <Transition name="fade-slide">
       <div v-if="snippets.length === 0" class="list-empty">
-        <div class="list-empty-icon">
-          <AppIcon name="search" :size="18" />
+        <div class="list-empty-art">
+          <img src="/illustrations/empty-list.png" alt="暂无内容" width="36" height="36" draggable="false" />
         </div>
         <span>暂无片段</span>
       </div>
@@ -235,16 +235,38 @@ function getLangColor(lang) {
   font-size: 12px;
   font-weight: 500;
 }
-.list-empty-icon {
+.list-empty-art {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, #f5f5f7 0%, #ececee 100%);
-  box-shadow: var(--inset-sunken);
-  color: var(--text-tertiary);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.8),
+    0 1px 2px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .list-empty-art {
+  background: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.2);
+}
+
+.list-empty-art img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.7;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+[data-theme="dark"] .list-empty-art img {
+  opacity: 0.85;
 }
 
 .list-enter-active {
